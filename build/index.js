@@ -7405,7 +7405,7 @@ function showProgress(load, current, count, percent) {
 cls().paper(1).pen(1).rect(CENTER - HALF_WIDTH - 2, MIDDLE - 4, HALF_WIDTH * 2 + 4, 8); // loading bar
 assetLoader.preloadStaticAssets(onAssetsLoaded, showProgress);
 
-},{"../settings.json":40,"../src/main.js":42,"EventEmitter":5,"Map":6,"TINA":27,"Texture":30,"assetLoader":31,"audio-manager":33}],40:[function(require,module,exports){
+},{"../settings.json":40,"../src/main.js":43,"EventEmitter":5,"Map":6,"TINA":27,"Texture":30,"assetLoader":31,"audio-manager":33}],40:[function(require,module,exports){
 module.exports={
 	"screen": {
 		"width": 160,
@@ -7441,44 +7441,255 @@ module.exports={
 	}
 }
 },{}],41:[function(require,module,exports){
-var STAGE_WIDTH  = 20 * 8;
-var STAGE_HEIGHT = 20 * 8;
+var tiles = require('./tiles');
 
-function Level(levelDef) {
-	this.background = new Texture(STAGE_WIDTH, STAGE_HEIGHT);
-	this.load(levelDef);
+
+var TILE_WIDTH  = settings.spriteSize[0];
+var TILE_HEIGHT = settings.spriteSize[1];
+
+var STAGE_WIDTH  = 20;
+var STAGE_HEIGHT = 20;
+
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+function Level() {
+	this.width  = STAGE_WIDTH;
+	this.height = STAGE_HEIGHT;
+	this.background = new Texture(STAGE_WIDTH * TILE_WIDTH, STAGE_HEIGHT * TILE_HEIGHT);
+	this.geometry   = new Map(STAGE_WIDTH, STAGE_HEIGHT);
 }
 
-module.exports = Level;
-
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Level.prototype.load = function (levelDef) {
 	var id = levelDef.id;
+	var path = 'level' + id + '/';
+
+	// geometry
+	this.geometry = getMap(path + 'G');
+	if (!this.geometry) console.error('Could not find map', path + 'G');
+
+	// design
 	this.background.paper(levelDef.paper);
 	this.background.cls();
-	var path = 'level' + id + '/';
 	var l = 0;
 	var layer = getMap(path + 'L' + l);
 	while (layer) {
 		this.background.draw(layer);
 		layer = getMap(path + 'L' + (++l));
 	}
+
 	return this;
 };
 
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Level.prototype.draw = function () {
 	draw(this.background, 0, 0);
 };
-},{}],42:[function(require,module,exports){
-var Level = require('./Level');
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-var level = new Level(assets.levels.level1);
+Level.prototype.getTileAt = function (x, y) {
+	x = ~~(x / TILE_WIDTH);
+	y = ~~(y / TILE_HEIGHT);
+	// clamp position in level bondaries
+	if (x < 0) x = 0; else if (x >= this.width)  x = this.width  - 1;
+	if (y < 0) y = 0; else if (y >= this.height) y = this.height - 1;
+	// if (x < 0 || y < 0 || x >= this.width || y >= this.height) return EMPTY;
+	return tiles.getTileFromMapItem(this.geometry.get(x, y));
+};
+
+module.exports = new Level();
+
+},{"./tiles":44}],42:[function(require,module,exports){
+var level = require('./Level');
+
+var TILE_WIDTH  = settings.spriteSize[0];
+var TILE_HEIGHT = settings.spriteSize[1];
+
+var GRAVITY     = 0.5;
+var MAX_GRAVITY = 3;
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+function Player() {
+	this.x  = 0;
+	this.y  = 0;
+	this.w  = TILE_WIDTH;
+	this.h  = TILE_HEIGHT;
+	this.sx = 0;
+	this.sy = 0;
+
+	// flags
+	this.jumping  = false;
+	this.grounded = false;
+	this.isLocked = false;
+
+	// counters
+	this.jumpCounter = 0; // TODO: 
+
+	// rendering
+	this.flipH = false;
+}
+
+module.exports = Player;
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Player.prototype.draw = function () {
+	sprite(0, this.x, this.y, this.flipH);
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Player.prototype.update = function (dt) {
+	this._updateControls();
+
+	// TODO: movement, gravity, friction
+
+	this.sx *= 0.8; // friction TODO dt
+
+	if (!this.grounded) {
+		this.sy += GRAVITY;
+		this.sy = Math.min(this.sy, MAX_GRAVITY);
+	}
+
+	this.levelCollisions();
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Player.prototype.startJump = function () {
+	if (!this.grounded) return;
+
+	// if there is a ceiling directly on top of Player's head, cancel jump.
+	// if (level.getTileAt(this.x + 1, this.y - 2).isSolid || level.getTileAt(this.x + 6, this.y - 2).isSolid) return;
+	this.grounded    = false;
+	this.jumping     = true;
+	this.jumpCounter = 0;
+};
+
+Player.prototype.jump = function () {
+	if (!this.jumping) return;
+	if (this.jumpCounter++ > 12) this.jumping = false;
+	this.sy = -3 + this.jumpCounter * 0.08;
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Player.prototype._updateControls = function () {
+	if (!this.isLocked) {
+		if (btnp.up)  this.startJump();
+		if (btnr.up)  this.jumping = false;
+		if (btn.up)   this.jump();
+
+		if ( btn.right && !btn.left) { this.sx =  1; this.flipH = false; } // going right
+		if (!btn.right &&  btn.left) { this.sx = -1; this.flipH = true;  } // going left
+
+		// if (btnp.A) this.action();
+	} else {
+		if (btn.up) this.jump(); // FIXME: this is to allow jump continuation during attack
+	}
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Player.prototype.levelCollisions = function () {
+	// round speed
+	this.sx = ~~(this.sx * 100) / 100;
+	this.sy = ~~(this.sy * 100) / 100;
+
+	var x = this.x + this.sx; // TODO dt
+	var y = this.y + this.sy; // TODO dt
+
+	// TODO: check level boundaries
+
+	var front       = 8;
+	var frontOffset = 0;
+	if (this.sx < 0) { front = 0; frontOffset = 8; }
+
+	//---------------------------------------------------------
+	// horizontal collisions (check 2 front point)
+	if (this.sx !== 0) {
+		if (level.getTileAt(x + front, this.y + 1).isSolid || level.getTileAt(x + front, this.y + 7).isSolid) {
+			this.sx = 0;
+			x = ~~(x / TILE_WIDTH) * TILE_WIDTH + frontOffset;
+		}
+	}
+
+	//---------------------------------------------------------
+	// vertical collisions
+	if (this.grounded) {
+		// check if there is still floor under Player's feets
+		var tileDL = level.getTileAt(x + 1, y + 9);
+		var tileDR = level.getTileAt(x + 6, y + 9);
+		if (tileDL.isEmpty && tileDR.isEmpty) this.grounded = false;
+	} else if (this.sy > 0) {
+		// Player is falling. Check what is underneath
+		var tileDL = level.getTileAt(x + 1, y + 8);
+		var tileDR = level.getTileAt(x + 6, y + 8);
+		if (tileDL.isSolid || tileDR.isSolid) {
+			// collided with solid ground
+			this._ground();
+			y = ~~(y / TILE_HEIGHT) * TILE_HEIGHT;
+		} else if (tileDL.isTopSolid || tileDR.isTopSolid) {
+			// collided with one-way thru platform. Check if Player where over the edge the frame before.
+			var targetY = ~~(y / TILE_HEIGHT) * TILE_HEIGHT;
+			if (this.y <= targetY) {
+				this._ground();
+				y = targetY;
+			}
+		}
+	} else if (this.sy < 0) {
+		// Player is moving upward. Check for ceiling collision
+		var tileUL = level.getTileAt(x + 1, y);
+		var tileUR = level.getTileAt(x + 6, y);
+		if (tileUL.isSolid || tileUR.isSolid) {
+			this.sy = 0;
+			this.jumpCounter += 2;
+			y = ~~(y / TILE_HEIGHT) * TILE_HEIGHT + 8;
+		}
+	}
+
+	// fetch position
+	this.x = x;
+	this.y = y;
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Player.prototype._ground = function () {
+	this.grounded = true;
+	this.jumping  = false;
+	this.sy = 0;
+};
+
+},{"./Level":41}],43:[function(require,module,exports){
+var level  = require('./Level');
+var Player = require('./Player');
+
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+level.load(assets.levels.level1);
+
+var player = new Player();
+player.x = 16;
+player.y = 16;
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 // Update is called once per frame
 exports.update = function () {
 	cls();
 	level.draw();
+	player.update();
+	player.draw();
 };
 
-},{"./Level":41}]},{},[39]);
+},{"./Level":41,"./Player":42}],44:[function(require,module,exports){
+var EMPTY   = exports.EMPTY   = { isEmpty: true,  isSolid: false, isTopSolid: false };
+var SOLID   = exports.SOLID   = { isEmpty: false, isSolid: true,  isTopSolid: true  };
+var ONE_WAY = exports.ONE_WAY = { isEmpty: false, isSolid: false, isTopSolid: true  };
+
+var tileBySprite = {
+	'0': SOLID,
+	'1': ONE_WAY
+};
+
+exports.getTileFromMapItem = function (mapItem) {
+	if (!mapItem) return EMPTY;
+	return tileBySprite[mapItem.sprite] || EMPTY;
+};
+
+
+},{}]},{},[39]);
