@@ -1,19 +1,19 @@
 var level  = require('./Level');
-var Player = require('./Player');
+var Monkey = require('./Monkey');
 
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 level.load(assets.levels.level1);
 
-var player = new Player();
-player.x = 16;
-player.y = 16;
+var monkey = new Monkey();
+monkey.x = 16;
+monkey.y = 16;
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 // Update is called once per frame
 exports.update = function () {
 	cls();
 	level.draw();
-	player.update();
-	player.draw();
+	monkey.update();
+	monkey.draw();
 };
