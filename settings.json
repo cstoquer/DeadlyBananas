@@ -1,7 +1,7 @@
 {
 	"screen": {
-		"width": 128,
-		"height": 128,
+		"width": 160,
+		"height": 160,
 		"pixelSize": [4, 4]
 	},
 	"spriteSize": [8, 8],
