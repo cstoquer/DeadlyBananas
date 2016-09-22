@@ -1,0 +1,14 @@
+{
+	"name": "deadly-bananas",
+	"author": "Cedric Stoquer",
+	"version": "1.0.0",
+	"description": "Monkey fight with teleporting boomerang deadly bananas",
+	"main": "main.js",
+	"scripts": {
+		"start": "electron ."
+	},
+	"license": "MIT",
+	"devDependencies": {
+		"electron": "^1.3.4"
+	}
+}
