@@ -1,4 +1,6 @@
 var electron = require('electron');
+var settings = require('./settings.json');
+
 // Module to control application life.
 var app = electron.app;
 // Module to create native browser window.
@@ -8,15 +10,25 @@ var BrowserWindow = electron.BrowserWindow;
 // be closed automatically when the JavaScript object is garbage collected.
 var mainWindow;
 
+
 function createWindow () {
 	// Create the browser window.
-	mainWindow = new BrowserWindow({ width: 800, height: 600 });
+	var width  = settings.screen.width  * settings.screen.pixelSize[0];
+	var height = settings.screen.height * settings.screen.pixelSize[1];
+
+	mainWindow = new BrowserWindow({ width: width, height: height, frame: false });
 
 	// and load the index.html of the app.
-	mainWindow.loadURL('file://${__dirname}/index.html');
+	mainWindow.loadURL('file://' + __dirname + '/index.html');
+
+	// remove menu bar
+	mainWindow.setMenu(null);
+
+	// disable resizable
+	mainWindow.setResizable(false);
 
 	// Open the DevTools.
-	mainWindow.webContents.openDevTools();
+	// mainWindow.webContents.openDevTools();
 
 	// Emitted when the window is closed.
 	mainWindow.on('closed', function () {

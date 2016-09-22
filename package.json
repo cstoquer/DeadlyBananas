@@ -3,7 +3,7 @@
 	"author": "Cedric Stoquer",
 	"version": "1.0.0",
 	"description": "Monkey fight with teleporting boomerang deadly bananas",
-	"main": "main.js",
+	"main": "electron.js",
 	"scripts": {
 		"start": "electron ."
 	},
