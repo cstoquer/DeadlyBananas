@@ -6640,8 +6640,14 @@ module.exports={
 },{}],37:[function(require,module,exports){
 var level = require('./Level');
 
-var FRICTION = 0.9;
-var ACCELERATION = 0.1;
+var TILE_WIDTH  = settings.spriteSize[0];
+var TILE_HEIGHT = settings.spriteSize[1];
+
+var FRICTION         = 0.9;
+var ACCELERATION     = 0.01;
+var MAX_ACCELERATION = 0.5;
+var THROW_DURATION   = 20;
+var MAX_SPEED        = 3;
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 function Banana(owner) {
@@ -6653,7 +6659,13 @@ function Banana(owner) {
 	this.sy = 0;
 
 	this.owner  = owner;
-	this.flying = false;
+
+	// flags
+	this.flying   = false;
+	this.throwing = false;
+
+	//counters
+	this.throwCounter = 0;
 }
 
 module.exports = Banana;
@@ -6664,27 +6676,70 @@ Banana.prototype.draw = function () {
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Banana.prototype.maxSpeed = function () {
+	if (this.sx >  MAX_SPEED) this.sx =  MAX_SPEED;
+	if (this.sx < -MAX_SPEED) this.sx = -MAX_SPEED;
+	if (this.sy >  MAX_SPEED) this.sy =  MAX_SPEED;
+	if (this.sy < -MAX_SPEED) this.sy = -MAX_SPEED;
+}
+
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Banana.prototype.update = function () {
-	if (this.flying) {
-		this.sx += (this.owner.x - this.x) * ACCELERATION;
-		this.sy += (this.owner.y - this.y) * ACCELERATION;
+	if (this.throwing) {
+		if (this.throwCounter++ > THROW_DURATION) {
+			this.throwing = false;
+		}
+		this.levelCollisions();
+	} else if (this.flying) {
+		this.sx += clip((this.owner.x - this.x) * ACCELERATION, -MAX_ACCELERATION, MAX_ACCELERATION);
+		this.sy += clip((this.owner.y - this.y) * ACCELERATION, -MAX_ACCELERATION, MAX_ACCELERATION);
 
 		this.sx *= FRICTION;
 		this.sy *= FRICTION;
 
-		this.x += this.sx;
-		this.y += this.sy;
+		this.maxSpeed();
+		this.levelCollisions();
+		
 	} else {
-		this.x = this.owner.x;
-		this.y = this.owner.y;
+		this.x = this.owner.x + 3;
+		this.y = this.owner.y + 3;
 	}
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Banana.prototype.levelCollisions = function () {
+
+	var x = this.x + this.sx;
+	var y = this.y + this.sy;
+
+
+	if (level.getTileAt(x, this.y).isSolid) {
+		this.sx *= -1;
+		x = this.x;
+		// x = ~~(x / TILE_WIDTH) * TILE_WIDTH + frontOffset;
+	}
+
+	if (level.getTileAt(this.x, y).isSolid) {
+		this.sy *= -1;
+		y = this.y;
+	}
+
+
+	// fetch position
+	this.x = x;
+	this.y = y;
+};
+
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Banana.prototype.fire = function (sx, sy) {
 	this.flying = true;
+	this.throwing = true;
+	this.throwCounter = 0;
 	this.sx = sx;
 	this.sy = sy;
+	this.maxSpeed();
 };
 },{"./Level":38}],38:[function(require,module,exports){
 var tiles = require('./tiles');
@@ -6806,10 +6861,22 @@ Monkey.prototype.update = function (dt) {
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-Monkey.prototype.action = function () {
+Monkey.prototype.action = function (gamepad) {
 	// TODO test if hold banana
 
-	this.banana.fire(this.sx + (this.flipH ? -4 : 4), this.sy);
+	this.banana.fire(this.sx + gamepad.x * 4, this.sy + gamepad.y * 4);
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Monkey.prototype.teleport = function () {
+	// TODO: cooldown
+	var x = this.x;
+	var y = this.y;
+	this.x = this.banana.x;
+	this.y = this.banana.y;
+	this.banana.x = x;
+	this.banana.y = y;
+	// TODO move monkey away from solid tile
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
@@ -6840,7 +6907,10 @@ Monkey.prototype._updateControls = function () {
 		if (gamepad.btn.right || gamepad.x >  0.5) { this.sx =  1; this.flipH = false; } // going right
 		if (gamepad.btn.left  || gamepad.x < -0.5) { this.sx = -1; this.flipH = true;  } // going left
 
-		if (gamepad.btnp.X) this.action();
+		if (gamepad.btnp.X) this.action(gamepad);
+		if (gamepad.btnp.B) this.teleport(); // TODO
+			
+
 	} else {
 		if (gamepad.btn.A) this.jump(); // FIXME: this is to allow jump continuation during attack
 	}

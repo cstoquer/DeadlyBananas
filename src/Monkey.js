@@ -58,10 +58,22 @@ Monkey.prototype.update = function (dt) {
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-Monkey.prototype.action = function () {
+Monkey.prototype.action = function (gamepad) {
 	// TODO test if hold banana
 
-	this.banana.fire(this.sx + (this.flipH ? -4 : 4), this.sy);
+	this.banana.fire(this.sx + gamepad.x * 4, this.sy + gamepad.y * 4);
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Monkey.prototype.teleport = function () {
+	// TODO: cooldown
+	var x = this.x;
+	var y = this.y;
+	this.x = this.banana.x;
+	this.y = this.banana.y;
+	this.banana.x = x;
+	this.banana.y = y;
+	// TODO move monkey away from solid tile
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
@@ -92,7 +104,10 @@ Monkey.prototype._updateControls = function () {
 		if (gamepad.btn.right || gamepad.x >  0.5) { this.sx =  1; this.flipH = false; } // going right
 		if (gamepad.btn.left  || gamepad.x < -0.5) { this.sx = -1; this.flipH = true;  } // going left
 
-		if (gamepad.btnp.X) this.action();
+		if (gamepad.btnp.X) this.action(gamepad);
+		if (gamepad.btnp.B) this.teleport(); // TODO
+			
+
 	} else {
 		if (gamepad.btn.A) this.jump(); // FIXME: this is to allow jump continuation during attack
 	}
