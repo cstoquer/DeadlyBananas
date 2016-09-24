@@ -1,4 +1,5 @@
 var level = require('./Level');
+var getGamepad = require('./gamepad.js');
 
 var TILE_WIDTH  = settings.spriteSize[0];
 var TILE_HEIGHT = settings.spriteSize[1];
@@ -66,21 +67,41 @@ Monkey.prototype.jump = function () {
 	this.sy = -3 + this.jumpCounter * 0.08;
 };
 
+
+
+
+
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Monkey.prototype._updateControls = function () {
+	var gamepad = getGamepad();
 	if (!this.isLocked) {
-		if (btnp.up)  this.startJump();
-		if (btnr.up)  this.jumping = false;
-		if (btn.up)   this.jump();
+		if (gamepad.btnp.A) this.startJump();
+		if (gamepad.btnr.A)  this.jumping = false;
+		if (gamepad.btn.A) this.jump();
 
-		if ( btn.right && !btn.left) { this.sx =  1; this.flipH = false; } // going right
-		if (!btn.right &&  btn.left) { this.sx = -1; this.flipH = true;  } // going left
+		if (gamepad.btn.right || gamepad.x >  0.5) { this.sx =  1; this.flipH = false; } // going right
+		if (gamepad.btn.left  || gamepad.x < -0.5) { this.sx = -1; this.flipH = true;  } // going left
 
 		// if (btnp.A) this.action();
 	} else {
-		if (btn.up) this.jump(); // FIXME: this is to allow jump continuation during attack
+		if (gamepad.btn.A) this.jump(); // FIXME: this is to allow jump continuation during attack
 	}
 };
+
+// Monkey.prototype._updateControls = function () {
+// 	if (!this.isLocked) {
+// 		if (btnp.up)  this.startJump();
+// 		if (btnr.up)  this.jumping = false;
+// 		if (btn.up)   this.jump();
+
+// 		if ( btn.right && !btn.left) { this.sx =  1; this.flipH = false; } // going right
+// 		if (!btn.right &&  btn.left) { this.sx = -1; this.flipH = true;  } // going left
+
+// 		// if (btnp.A) this.action();
+// 	} else {
+// 		if (btn.up) this.jump(); // FIXME: this is to allow jump continuation during attack
+// 	}
+// };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Monkey.prototype.levelCollisions = function () {

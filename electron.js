@@ -13,10 +13,10 @@ var mainWindow;
 
 function createWindow () {
 	// Create the browser window.
-	var width  = settings.screen.width  * settings.screen.pixelSize[0];
-	var height = settings.screen.height * settings.screen.pixelSize[1];
+	var width  = settings.screen.width  * settings.screen.pixelSize[0] + 20;
+	var height = settings.screen.height * settings.screen.pixelSize[1] + 20;
 
-	mainWindow = new BrowserWindow({ width: width, height: height, frame: false });
+	mainWindow = new BrowserWindow({ width: width, height: height, frame: true });
 
 	// and load the index.html of the app.
 	mainWindow.loadURL('file://' + __dirname + '/index.html');
@@ -25,10 +25,10 @@ function createWindow () {
 	mainWindow.setMenu(null);
 
 	// disable resizable
-	mainWindow.setResizable(false);
+	// mainWindow.setResizable(false);
 
 	// Open the DevTools.
-	// mainWindow.webContents.openDevTools();
+	mainWindow.webContents.openDevTools();
 
 	// Emitted when the window is closed.
 	mainWindow.on('closed', function () {
