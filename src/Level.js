@@ -13,7 +13,7 @@ function Level() {
 	this.width  = STAGE_WIDTH;
 	this.height = STAGE_HEIGHT;
 	this.background = new Texture(STAGE_WIDTH * TILE_WIDTH, STAGE_HEIGHT * TILE_HEIGHT);
-	this.geometry   = new Map(STAGE_WIDTH, STAGE_HEIGHT);
+	this.geometry   = null;//new Map(STAGE_WIDTH, STAGE_HEIGHT);
 }
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄

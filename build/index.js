@@ -5867,7 +5867,7 @@ Sound.prototype.stop = function (cb) {
 	return cb && cb(); // TODO: fade-out
 };
 
-},{"./ISound.js":30,"util":45}],33:[function(require,module,exports){
+},{"./ISound.js":30,"util":46}],33:[function(require,module,exports){
 var inherits = require('util').inherits;
 var ISound   = require('./ISound.js');
 
@@ -6249,7 +6249,7 @@ SoundBuffered.prototype.stop = function (cb) {
 };
 
 
-},{"./ISound.js":30,"util":45}],34:[function(require,module,exports){
+},{"./ISound.js":30,"util":46}],34:[function(require,module,exports){
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 /** Set of sound played in sequence each times it triggers
  *  used for animation sfx
@@ -6343,7 +6343,7 @@ var Map          = require('Map');
 // built-in modules
 
 window.EventEmitter = EventEmitter;
-window.Map          = Map;
+// window.Map          = Map;
 window.TINA         = TINA;
 
 window.inherits = function (Child, Parent) {
@@ -6602,7 +6602,7 @@ function showProgress(load, current, count, percent) {
 cls().paper(1).pen(1).rect(CENTER - HALF_WIDTH - 2, MIDDLE - 4, HALF_WIDTH * 2 + 4, 8); // loading bar
 assetLoader.preloadStaticAssets(onAssetsLoaded, showProgress);
 
-},{"../settings.json":36,"../src/main.js":40,"EventEmitter":1,"Map":2,"TINA":23,"Texture":26,"assetLoader":27,"audio-manager":29}],36:[function(require,module,exports){
+},{"../settings.json":36,"../src/main.js":41,"EventEmitter":1,"Map":2,"TINA":23,"Texture":26,"assetLoader":27,"audio-manager":29}],36:[function(require,module,exports){
 module.exports={
 	"screen": {
 		"width": 160,
@@ -6638,6 +6638,55 @@ module.exports={
 	}
 }
 },{}],37:[function(require,module,exports){
+var level = require('./Level');
+
+var FRICTION = 0.9;
+var ACCELERATION = 0.1;
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+function Banana(owner) {
+	this.x  = 0;
+	this.y  = 0;
+	this.w  = 2;
+	this.h  = 2;
+	this.sx = 0;
+	this.sy = 0;
+
+	this.owner  = owner;
+	this.flying = false;
+}
+
+module.exports = Banana;
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Banana.prototype.draw = function () {
+	sprite(1, this.x - 3, this.y - 3, this.flipH);
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Banana.prototype.update = function () {
+	if (this.flying) {
+		this.sx += (this.owner.x - this.x) * ACCELERATION;
+		this.sy += (this.owner.y - this.y) * ACCELERATION;
+
+		this.sx *= FRICTION;
+		this.sy *= FRICTION;
+
+		this.x += this.sx;
+		this.y += this.sy;
+	} else {
+		this.x = this.owner.x;
+		this.y = this.owner.y;
+	}
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Banana.prototype.fire = function (sx, sy) {
+	this.flying = true;
+	this.sx = sx;
+	this.sy = sy;
+};
+},{"./Level":38}],38:[function(require,module,exports){
 var tiles = require('./tiles');
 
 
@@ -6653,7 +6702,7 @@ function Level() {
 	this.width  = STAGE_WIDTH;
 	this.height = STAGE_HEIGHT;
 	this.background = new Texture(STAGE_WIDTH * TILE_WIDTH, STAGE_HEIGHT * TILE_HEIGHT);
-	this.geometry   = new Map(STAGE_WIDTH, STAGE_HEIGHT);
+	this.geometry   = null;//new Map(STAGE_WIDTH, STAGE_HEIGHT);
 }
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
@@ -6696,9 +6745,10 @@ Level.prototype.getTileAt = function (x, y) {
 
 module.exports = new Level();
 
-},{"./tiles":41}],38:[function(require,module,exports){
-var level = require('./Level');
-var getGamepad = require('./gamepad.js');
+},{"./tiles":42}],39:[function(require,module,exports){
+var level       = require('./Level');
+var getGamepads = require('./gamepad.js');
+var Banana      = require('./Banana');
 
 var TILE_WIDTH  = settings.spriteSize[0];
 var TILE_HEIGHT = settings.spriteSize[1];
@@ -6707,13 +6757,16 @@ var GRAVITY     = 0.5;
 var MAX_GRAVITY = 3;
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-function Monkey() {
+function Monkey(gamepadIndex) {
 	this.x  = 0;
 	this.y  = 0;
 	this.w  = TILE_WIDTH;
 	this.h  = TILE_HEIGHT;
 	this.sx = 0;
 	this.sy = 0;
+
+	this.gamepadIndex = gamepadIndex || 0;
+	this.banana = new Banana(this);
 
 	// flags
 	this.jumping  = false;
@@ -6732,6 +6785,7 @@ module.exports = Monkey;
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Monkey.prototype.draw = function () {
 	sprite(0, this.x, this.y, this.flipH);
+	this.banana.draw();
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
@@ -6747,6 +6801,15 @@ Monkey.prototype.update = function (dt) {
 		this.sy = Math.min(this.sy, MAX_GRAVITY);
 	}
 	this.levelCollisions();
+
+	this.banana.update();
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Monkey.prototype.action = function () {
+	// TODO test if hold banana
+
+	this.banana.fire(this.sx + (this.flipH ? -4 : 4), this.sy);
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
@@ -6766,41 +6829,22 @@ Monkey.prototype.jump = function () {
 	this.sy = -3 + this.jumpCounter * 0.08;
 };
 
-
-
-
-
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Monkey.prototype._updateControls = function () {
-	var gamepad = getGamepad();
+	var gamepad = getGamepads()[this.gamepadIndex];
 	if (!this.isLocked) {
 		if (gamepad.btnp.A) this.startJump();
-		if (gamepad.btnr.A)  this.jumping = false;
-		if (gamepad.btn.A) this.jump();
+		if (gamepad.btnr.A) this.jumping = false;
+		if (gamepad.btn.A)  this.jump();
 
 		if (gamepad.btn.right || gamepad.x >  0.5) { this.sx =  1; this.flipH = false; } // going right
 		if (gamepad.btn.left  || gamepad.x < -0.5) { this.sx = -1; this.flipH = true;  } // going left
 
-		// if (btnp.A) this.action();
+		if (gamepad.btnp.X) this.action();
 	} else {
 		if (gamepad.btn.A) this.jump(); // FIXME: this is to allow jump continuation during attack
 	}
 };
-
-// Monkey.prototype._updateControls = function () {
-// 	if (!this.isLocked) {
-// 		if (btnp.up)  this.startJump();
-// 		if (btnr.up)  this.jumping = false;
-// 		if (btn.up)   this.jump();
-
-// 		if ( btn.right && !btn.left) { this.sx =  1; this.flipH = false; } // going right
-// 		if (!btn.right &&  btn.left) { this.sx = -1; this.flipH = true;  } // going left
-
-// 		// if (btnp.A) this.action();
-// 	} else {
-// 		if (btn.up) this.jump(); // FIXME: this is to allow jump continuation during attack
-// 	}
-// };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Monkey.prototype.levelCollisions = function () {
@@ -6871,7 +6915,7 @@ Monkey.prototype._ground = function () {
 	this.sy = 0;
 };
 
-},{"./Level":37,"./gamepad.js":39}],39:[function(require,module,exports){
+},{"./Banana":37,"./Level":38,"./gamepad.js":40}],40:[function(require,module,exports){
 var MAPPING_BUTTONS = [
 	'A', 'B', 'X', 'Y',           // buttons
 	'lb', 'rb', 'lt','rt',        // bumpers and triggers
@@ -6914,8 +6958,6 @@ Gamepad.prototype._setupButtons = function () {
 	}
 };
 
-var GAMEPAD = new Gamepad();
-
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 // function gamepadHandler(event, connecting) {
 // 	console.log('Gamepad event', connecting)
@@ -6931,54 +6973,61 @@ var GAMEPAD = new Gamepad();
 // window.addEventListener("gamepaddisconnected", function (e) { gamepadHandler(e, false); }, false);
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-function getGamepad() {
+var GAMEPADS = [
+	new Gamepad(),
+	new Gamepad(),
+	new Gamepad(),
+	new Gamepad()
+];
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+function getGamepads() {
 	var gamepads = navigator.getGamepads();
-	var gamepad = gamepads[0]; // TODO: all gamepads
-	if (!gamepad) {
-		GAMEPAD.available = false;
-		return GAMEPAD;
+
+	for (var gamepadIndex = 0; gamepadIndex < 4; gamepadIndex++) {
+		var gamepad = gamepads[gamepadIndex];
+		var GAMEPAD = GAMEPADS[gamepadIndex];
+		if (!gamepad) {
+			GAMEPAD.available = false;
+			continue;
+		}
+
+		GAMEPAD.available = true;
+
+		// buttons
+		for (var i = 0; i < MAPPING_BUTTONS.length; i++) {
+			var key = MAPPING_BUTTONS[i];
+			var button = gamepad.buttons[i].pressed;
+			GAMEPAD.btnp[key] = !GAMEPAD.btn[key] &&  button;
+			GAMEPAD.btnr[key] =  GAMEPAD.btn[key] && !button;
+			GAMEPAD.btn[key]  =  button;
+		}
+
+		// axes
+		GAMEPAD.x = gamepad.axes[0];
+		GAMEPAD.y = gamepad.axes[1];
+		GAMEPAD.z = gamepad.axes[2];
+		GAMEPAD.w = gamepad.axes[3];
+
+		// triggers
+		GAMEPAD.lt = gamepad.buttons[6].value;
+		GAMEPAD.rt = gamepad.buttons[7].value;
 	}
 
-	GAMEPAD.available = true;
-
-	// buttons
-	for (var i = 0; i < MAPPING_BUTTONS.length; i++) {
-		var key = MAPPING_BUTTONS[i];
-		var button = gamepad.buttons[i];
-		GAMEPAD.btnp[key] = !GAMEPAD.btn[key] &&  button;
-		GAMEPAD.btnr[key] =  GAMEPAD.btn[key] && !button;
-		GAMEPAD.btn[key]  =  button.pressed;
-	}
-
-	// axes
-	GAMEPAD.x = gamepad.axes[0];
-	GAMEPAD.y = gamepad.axes[1];
-	GAMEPAD.z = gamepad.axes[2];
-	GAMEPAD.w = gamepad.axes[3];
-
-	// triggers
-	GAMEPAD.lt = gamepad.buttons[6].value;
-	GAMEPAD.rt = gamepad.buttons[7].value;
-
-	return GAMEPAD;
+	return GAMEPADS;
 }
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-function getGamepadFallback() {
-	return GAMEPAD;
+function getGamepadsFallback() {
+	return GAMEPADS;
 }
 
-module.exports = GAMEPAD_AVAILABLE ? getGamepad : getGamepadFallback;
+module.exports = GAMEPAD_AVAILABLE ? getGamepads : getGamepadsFallback;
 
-},{}],40:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 var canvas = $screen.canvas;
 canvas.style.width  = '100%';
 canvas.style.height = '100%';
-
-//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-// GAMEPADS
-console.log(window.gamepads)
-
 
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
@@ -6988,7 +7037,7 @@ var Monkey = require('./Monkey');
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 level.load(assets.levels.level1);
 
-var monkey = new Monkey();
+var monkey = new Monkey(0);
 monkey.x = 16;
 monkey.y = 16;
 
@@ -7001,7 +7050,7 @@ exports.update = function () {
 	monkey.draw();
 };
 
-},{"./Level":37,"./Monkey":38}],41:[function(require,module,exports){
+},{"./Level":38,"./Monkey":39}],42:[function(require,module,exports){
 var EMPTY   = exports.EMPTY   = { isEmpty: true,  isSolid: false, isTopSolid: false };
 var SOLID   = exports.SOLID   = { isEmpty: false, isSolid: true,  isTopSolid: true  };
 var ONE_WAY = exports.ONE_WAY = { isEmpty: false, isSolid: false, isTopSolid: true  };
@@ -7017,7 +7066,7 @@ exports.getTileFromMapItem = function (mapItem) {
 };
 
 
-},{}],42:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -7042,7 +7091,7 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],43:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -7135,14 +7184,14 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],44:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],45:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -7732,4 +7781,4 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":44,"_process":43,"inherits":42}]},{},[35]);
+},{"./support/isBuffer":45,"_process":44,"inherits":43}]},{},[35]);

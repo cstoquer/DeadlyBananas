@@ -1,5 +1,6 @@
-var level = require('./Level');
-var getGamepad = require('./gamepad.js');
+var level       = require('./Level');
+var getGamepads = require('./gamepad.js');
+var Banana      = require('./Banana');
 
 var TILE_WIDTH  = settings.spriteSize[0];
 var TILE_HEIGHT = settings.spriteSize[1];
@@ -8,13 +9,16 @@ var GRAVITY     = 0.5;
 var MAX_GRAVITY = 3;
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-function Monkey() {
+function Monkey(gamepadIndex) {
 	this.x  = 0;
 	this.y  = 0;
 	this.w  = TILE_WIDTH;
 	this.h  = TILE_HEIGHT;
 	this.sx = 0;
 	this.sy = 0;
+
+	this.gamepadIndex = gamepadIndex || 0;
+	this.banana = new Banana(this);
 
 	// flags
 	this.jumping  = false;
@@ -33,6 +37,7 @@ module.exports = Monkey;
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Monkey.prototype.draw = function () {
 	sprite(0, this.x, this.y, this.flipH);
+	this.banana.draw();
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
@@ -48,6 +53,15 @@ Monkey.prototype.update = function (dt) {
 		this.sy = Math.min(this.sy, MAX_GRAVITY);
 	}
 	this.levelCollisions();
+
+	this.banana.update();
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Monkey.prototype.action = function () {
+	// TODO test if hold banana
+
+	this.banana.fire(this.sx + (this.flipH ? -4 : 4), this.sy);
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
@@ -67,41 +81,22 @@ Monkey.prototype.jump = function () {
 	this.sy = -3 + this.jumpCounter * 0.08;
 };
 
-
-
-
-
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Monkey.prototype._updateControls = function () {
-	var gamepad = getGamepad();
+	var gamepad = getGamepads()[this.gamepadIndex];
 	if (!this.isLocked) {
 		if (gamepad.btnp.A) this.startJump();
-		if (gamepad.btnr.A)  this.jumping = false;
-		if (gamepad.btn.A) this.jump();
+		if (gamepad.btnr.A) this.jumping = false;
+		if (gamepad.btn.A)  this.jump();
 
 		if (gamepad.btn.right || gamepad.x >  0.5) { this.sx =  1; this.flipH = false; } // going right
 		if (gamepad.btn.left  || gamepad.x < -0.5) { this.sx = -1; this.flipH = true;  } // going left
 
-		// if (btnp.A) this.action();
+		if (gamepad.btnp.X) this.action();
 	} else {
 		if (gamepad.btn.A) this.jump(); // FIXME: this is to allow jump continuation during attack
 	}
 };
-
-// Monkey.prototype._updateControls = function () {
-// 	if (!this.isLocked) {
-// 		if (btnp.up)  this.startJump();
-// 		if (btnr.up)  this.jumping = false;
-// 		if (btn.up)   this.jump();
-
-// 		if ( btn.right && !btn.left) { this.sx =  1; this.flipH = false; } // going right
-// 		if (!btn.right &&  btn.left) { this.sx = -1; this.flipH = true;  } // going left
-
-// 		// if (btnp.A) this.action();
-// 	} else {
-// 		if (btn.up) this.jump(); // FIXME: this is to allow jump continuation during attack
-// 	}
-// };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Monkey.prototype.levelCollisions = function () {
