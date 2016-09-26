@@ -1,3 +1,4 @@
 {
-	"level1": { "id": 1, "paper": 2 }
+	"level1": { "id": 1, "paper": 2 },
+	"level2": { "id": 2, "paper": 6 }
 }

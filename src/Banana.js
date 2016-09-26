@@ -32,7 +32,7 @@ module.exports = Banana;
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Banana.prototype.draw = function () {
-	sprite(1, this.x - 3, this.y - 3, this.flipH);
+	sprite(16, this.x - 3, this.y - 3, this.flipH);
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
@@ -76,13 +76,13 @@ Banana.prototype.levelCollisions = function () {
 
 	if (level.getTileAt(x, this.y).isSolid) {
 		this.sx *= -1;
-		x = this.x;
+		x = this.x; // TODO
 		// x = ~~(x / TILE_WIDTH) * TILE_WIDTH + frontOffset;
 	}
 
 	if (level.getTileAt(this.x, y).isSolid) {
 		this.sy *= -1;
-		y = this.y;
+		y = this.y; // TODO
 	}
 
 

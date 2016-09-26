@@ -1,5 +1,6 @@
-var tiles = require('./tiles');
-
+var Map     = require('Map');
+var Texture = require('Texture');
+var tiles   = require('./tiles');
 
 var TILE_WIDTH  = settings.spriteSize[0];
 var TILE_HEIGHT = settings.spriteSize[1];
@@ -13,7 +14,7 @@ function Level() {
 	this.width  = STAGE_WIDTH;
 	this.height = STAGE_HEIGHT;
 	this.background = new Texture(STAGE_WIDTH * TILE_WIDTH, STAGE_HEIGHT * TILE_HEIGHT);
-	this.geometry   = null;//new Map(STAGE_WIDTH, STAGE_HEIGHT);
+	this.geometry   = new Map(STAGE_WIDTH, STAGE_HEIGHT);
 }
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
@@ -25,9 +26,19 @@ Level.prototype.load = function (levelDef) {
 	this.geometry = getMap(path + 'G');
 	if (!this.geometry) console.error('Could not find map', path + 'G');
 
+	// resize
+	var w = this.geometry.width  * TILE_WIDTH;
+	var h = this.geometry.height * TILE_HEIGHT;
+	// TODO HUD
+	var canvas = $screen.canvas;
+	this.width  = canvas.width  = w;
+	this.height = canvas.height = h;
+
 	// design
+	this.background.resize(w, h);
 	this.background.paper(levelDef.paper);
 	this.background.cls();
+
 	var l = 0;
 	var layer = getMap(path + 'L' + l);
 	while (layer) {

@@ -29,6 +29,7 @@ function Monkey(gamepadIndex) {
 	this.jumpCounter = 0; // TODO: 
 
 	// rendering
+	this.frame = 0;
 	this.flipH = false;
 }
 
@@ -36,7 +37,17 @@ module.exports = Monkey;
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Monkey.prototype.draw = function () {
-	sprite(0, this.x, this.y, this.flipH);
+	var s = 0;
+	//jumping
+	if (this.jumping) s = 1;
+
+	//running
+	else if (this.sx > 0.5 || this.sx < -0.5) {
+		this.frame += 0.3;
+		if (this.frame >= 3) this.frame = 0;
+		s = 2 + ~~this.frame;
+	}
+	sprite(s, this.x, this.y, this.flipH);
 	this.banana.draw();
 };
 

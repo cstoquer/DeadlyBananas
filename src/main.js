@@ -8,7 +8,7 @@ var level  = require('./Level');
 var Monkey = require('./Monkey');
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-level.load(assets.levels.level1);
+level.load(assets.levels.level2);
 
 var monkey = new Monkey(0);
 monkey.x = 16;

@@ -6607,7 +6607,8 @@ module.exports={
 	"screen": {
 		"width": 160,
 		"height": 160,
-		"pixelSize": [4, 4]
+		"pixelSize": [4, 4],
+		"fullscreen": true
 	},
 	"spriteSize": [8, 8],
 	"palette": [
@@ -6672,7 +6673,7 @@ module.exports = Banana;
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Banana.prototype.draw = function () {
-	sprite(1, this.x - 3, this.y - 3, this.flipH);
+	sprite(16, this.x - 3, this.y - 3, this.flipH);
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
@@ -6716,13 +6717,13 @@ Banana.prototype.levelCollisions = function () {
 
 	if (level.getTileAt(x, this.y).isSolid) {
 		this.sx *= -1;
-		x = this.x;
+		x = this.x; // TODO
 		// x = ~~(x / TILE_WIDTH) * TILE_WIDTH + frontOffset;
 	}
 
 	if (level.getTileAt(this.x, y).isSolid) {
 		this.sy *= -1;
-		y = this.y;
+		y = this.y; // TODO
 	}
 
 
@@ -6742,8 +6743,9 @@ Banana.prototype.fire = function (sx, sy) {
 	this.maxSpeed();
 };
 },{"./Level":38}],38:[function(require,module,exports){
-var tiles = require('./tiles');
-
+var Map     = require('Map');
+var Texture = require('Texture');
+var tiles   = require('./tiles');
 
 var TILE_WIDTH  = settings.spriteSize[0];
 var TILE_HEIGHT = settings.spriteSize[1];
@@ -6757,7 +6759,7 @@ function Level() {
 	this.width  = STAGE_WIDTH;
 	this.height = STAGE_HEIGHT;
 	this.background = new Texture(STAGE_WIDTH * TILE_WIDTH, STAGE_HEIGHT * TILE_HEIGHT);
-	this.geometry   = null;//new Map(STAGE_WIDTH, STAGE_HEIGHT);
+	this.geometry   = new Map(STAGE_WIDTH, STAGE_HEIGHT);
 }
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
@@ -6769,9 +6771,19 @@ Level.prototype.load = function (levelDef) {
 	this.geometry = getMap(path + 'G');
 	if (!this.geometry) console.error('Could not find map', path + 'G');
 
+	// resize
+	var w = this.geometry.width  * TILE_WIDTH;
+	var h = this.geometry.height * TILE_HEIGHT;
+	// TODO HUD
+	var canvas = $screen.canvas;
+	this.width  = canvas.width  = w;
+	this.height = canvas.height = h;
+
 	// design
+	this.background.resize(w, h);
 	this.background.paper(levelDef.paper);
 	this.background.cls();
+
 	var l = 0;
 	var layer = getMap(path + 'L' + l);
 	while (layer) {
@@ -6800,7 +6812,7 @@ Level.prototype.getTileAt = function (x, y) {
 
 module.exports = new Level();
 
-},{"./tiles":42}],39:[function(require,module,exports){
+},{"./tiles":42,"Map":2,"Texture":26}],39:[function(require,module,exports){
 var level       = require('./Level');
 var getGamepads = require('./gamepad.js');
 var Banana      = require('./Banana');
@@ -6832,6 +6844,7 @@ function Monkey(gamepadIndex) {
 	this.jumpCounter = 0; // TODO: 
 
 	// rendering
+	this.frame = 0;
 	this.flipH = false;
 }
 
@@ -6839,7 +6852,17 @@ module.exports = Monkey;
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Monkey.prototype.draw = function () {
-	sprite(0, this.x, this.y, this.flipH);
+	var s = 0;
+	//jumping
+	if (this.jumping) s = 1;
+
+	//running
+	else if (this.sx > 0.5 || this.sx < -0.5) {
+		this.frame += 0.3;
+		if (this.frame >= 3) this.frame = 0;
+		s = 2 + ~~this.frame;
+	}
+	sprite(s, this.x, this.y, this.flipH);
 	this.banana.draw();
 };
 
@@ -7105,7 +7128,7 @@ var level  = require('./Level');
 var Monkey = require('./Monkey');
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-level.load(assets.levels.level1);
+level.load(assets.levels.level2);
 
 var monkey = new Monkey(0);
 monkey.x = 16;
