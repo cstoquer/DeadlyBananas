@@ -65,4 +65,18 @@ Level.prototype.getTileAt = function (x, y) {
 	return tiles.getTileFromMapItem(this.geometry.get(x, y));
 };
 
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Level.prototype.getSpawnPoints = function () {
+	var spawnPoints = this.geometry.find(255);
+	// randomize order
+	for (var len = spawnPoints.length - 1, i = len; i >= 0; i--) {
+		var r = random(len);
+		var temp = spawnPoints[r];
+		spawnPoints[r] = spawnPoints[i];
+		spawnPoints[i] = temp;
+	}
+
+	return spawnPoints;
+};
+
 module.exports = new Level();

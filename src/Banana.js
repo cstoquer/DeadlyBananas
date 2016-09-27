@@ -18,7 +18,7 @@ function Banana(owner) {
 	this.sx = 0;
 	this.sy = 0;
 
-	this.owner  = owner;
+	this.owner = owner;
 
 	// flags
 	this.flying   = false;
@@ -26,13 +26,21 @@ function Banana(owner) {
 
 	//counters
 	this.throwCounter = 0;
+
+	// rendering
+	this.frame = 0;
 }
 
 module.exports = Banana;
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Banana.prototype.draw = function () {
-	sprite(16, this.x - 3, this.y - 3, this.flipH);
+	if (this.flying) {
+		this.frame += 0.2;
+		if (this.frame >= 4) this.frame = 0;
+		sprite(this.owner.sprite + 9 + ~~this.frame, this.x - 3, this.y - 3);
+	}
+	else sprite(this.owner.sprite + 8, this.x - 3, this.y - 3);
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
@@ -63,7 +71,7 @@ Banana.prototype.update = function () {
 		
 	} else {
 		this.x = this.owner.x + 3;
-		this.y = this.owner.y + 3;
+		this.y = this.owner.y - 3;
 	}
 };
 

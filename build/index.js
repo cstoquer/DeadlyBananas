@@ -6659,7 +6659,7 @@ function Banana(owner) {
 	this.sx = 0;
 	this.sy = 0;
 
-	this.owner  = owner;
+	this.owner = owner;
 
 	// flags
 	this.flying   = false;
@@ -6667,13 +6667,21 @@ function Banana(owner) {
 
 	//counters
 	this.throwCounter = 0;
+
+	// rendering
+	this.frame = 0;
 }
 
 module.exports = Banana;
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Banana.prototype.draw = function () {
-	sprite(16, this.x - 3, this.y - 3, this.flipH);
+	if (this.flying) {
+		this.frame += 0.2;
+		if (this.frame >= 4) this.frame = 0;
+		sprite(this.owner.sprite + 9 + ~~this.frame, this.x - 3, this.y - 3);
+	}
+	else sprite(this.owner.sprite + 8, this.x - 3, this.y - 3);
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
@@ -6704,7 +6712,7 @@ Banana.prototype.update = function () {
 		
 	} else {
 		this.x = this.owner.x + 3;
-		this.y = this.owner.y + 3;
+		this.y = this.owner.y - 3;
 	}
 };
 
@@ -6810,11 +6818,24 @@ Level.prototype.getTileAt = function (x, y) {
 	return tiles.getTileFromMapItem(this.geometry.get(x, y));
 };
 
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Level.prototype.getSpawnPoints = function () {
+	var spawnPoints = this.geometry.find(255);
+	// randomize order
+	for (var len = spawnPoints.length - 1, i = len; i >= 0; i--) {
+		var r = random(len);
+		var temp = spawnPoints[r];
+		spawnPoints[r] = spawnPoints[i];
+		spawnPoints[i] = temp;
+	}
+
+	return spawnPoints;
+};
+
 module.exports = new Level();
 
 },{"./tiles":42,"Map":2,"Texture":26}],39:[function(require,module,exports){
 var level       = require('./Level');
-var getGamepads = require('./gamepad.js');
 var Banana      = require('./Banana');
 
 var TILE_WIDTH  = settings.spriteSize[0];
@@ -6844,6 +6865,7 @@ function Monkey(gamepadIndex) {
 	this.jumpCounter = 0; // TODO: 
 
 	// rendering
+	this.sprite = gamepadIndex * 16;
 	this.frame = 0;
 	this.flipH = false;
 }
@@ -6862,13 +6884,13 @@ Monkey.prototype.draw = function () {
 		if (this.frame >= 3) this.frame = 0;
 		s = 2 + ~~this.frame;
 	}
-	sprite(s, this.x, this.y, this.flipH);
+	sprite(this.sprite + s, this.x, this.y, this.flipH);
 	this.banana.draw();
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-Monkey.prototype.update = function (dt) {
-	this._updateControls();
+Monkey.prototype.update = function (gamepads, dt) {
+	this._updateControls(gamepads);
 
 	// TODO: movement, gravity, friction
 
@@ -6920,8 +6942,8 @@ Monkey.prototype.jump = function () {
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-Monkey.prototype._updateControls = function () {
-	var gamepad = getGamepads()[this.gamepadIndex];
+Monkey.prototype._updateControls = function (gamepads) {
+	var gamepad = gamepads[this.gamepadIndex];
 	if (!this.isLocked) {
 		if (gamepad.btnp.A) this.startJump();
 		if (gamepad.btnr.A) this.jumping = false;
@@ -7008,7 +7030,7 @@ Monkey.prototype._ground = function () {
 	this.sy = 0;
 };
 
-},{"./Banana":37,"./Level":38,"./gamepad.js":40}],40:[function(require,module,exports){
+},{"./Banana":37,"./Level":38}],40:[function(require,module,exports){
 var MAPPING_BUTTONS = [
 	'A', 'B', 'X', 'Y',           // buttons
 	'lb', 'rb', 'lt','rt',        // bumpers and triggers
@@ -7118,32 +7140,50 @@ function getGamepadsFallback() {
 module.exports = GAMEPAD_AVAILABLE ? getGamepads : getGamepadsFallback;
 
 },{}],41:[function(require,module,exports){
+var level       = require('./Level');
+var Monkey      = require('./Monkey');
+var getGamepads = require('./gamepad.js');
+
+var TILE_WIDTH  = settings.spriteSize[0];
+var TILE_HEIGHT = settings.spriteSize[1];
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 var canvas = $screen.canvas;
 canvas.style.width  = '100%';
 canvas.style.height = '100%';
 
-
-//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-var level  = require('./Level');
-var Monkey = require('./Monkey');
-
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 level.load(assets.levels.level2);
 
-var monkey = new Monkey(0);
-monkey.x = 16;
-monkey.y = 16;
+// TODO: make this array dynamic to add and remove monkeys
+var monkeys = [
+	new Monkey(0),
+	new Monkey(1),
+	new Monkey(2),
+	new Monkey(3)
+];
+
+var spawnPoints = level.getSpawnPoints();
+for (var i = 0; i < monkeys.length; i++) {
+	monkeys[i].x = spawnPoints[i].x * TILE_WIDTH;
+	monkeys[i].y = spawnPoints[i].y * TILE_HEIGHT;
+}
+
+console.log(monkeys)
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 // Update is called once per frame
 exports.update = function () {
 	cls();
 	level.draw();
-	monkey.update();
-	monkey.draw();
+	var gamepads = getGamepads();
+	for (var i = 0; i < monkeys.length; i++) {
+		monkeys[i].update(gamepads);
+		monkeys[i].draw();
+	}
 };
 
-},{"./Level":38,"./Monkey":39}],42:[function(require,module,exports){
+},{"./Level":38,"./Monkey":39,"./gamepad.js":40}],42:[function(require,module,exports){
 var EMPTY   = exports.EMPTY   = { isEmpty: true,  isSolid: false, isTopSolid: false };
 var SOLID   = exports.SOLID   = { isEmpty: false, isSolid: true,  isTopSolid: true  };
 var ONE_WAY = exports.ONE_WAY = { isEmpty: false, isSolid: false, isTopSolid: true  };
