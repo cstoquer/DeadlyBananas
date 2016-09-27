@@ -1,5 +1,4 @@
 var level       = require('./Level');
-var getGamepads = require('./gamepad.js');
 var Banana      = require('./Banana');
 
 var TILE_WIDTH  = settings.spriteSize[0];
@@ -29,6 +28,7 @@ function Monkey(gamepadIndex) {
 	this.jumpCounter = 0; // TODO: 
 
 	// rendering
+	this.sprite = gamepadIndex * 16;
 	this.frame = 0;
 	this.flipH = false;
 }
@@ -47,13 +47,13 @@ Monkey.prototype.draw = function () {
 		if (this.frame >= 3) this.frame = 0;
 		s = 2 + ~~this.frame;
 	}
-	sprite(s, this.x, this.y, this.flipH);
+	sprite(this.sprite + s, this.x, this.y, this.flipH);
 	this.banana.draw();
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-Monkey.prototype.update = function (dt) {
-	this._updateControls();
+Monkey.prototype.update = function (gamepads, dt) {
+	this._updateControls(gamepads);
 
 	// TODO: movement, gravity, friction
 
@@ -105,8 +105,8 @@ Monkey.prototype.jump = function () {
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-Monkey.prototype._updateControls = function () {
-	var gamepad = getGamepads()[this.gamepadIndex];
+Monkey.prototype._updateControls = function (gamepads) {
+	var gamepad = gamepads[this.gamepadIndex];
 	if (!this.isLocked) {
 		if (gamepad.btnp.A) this.startJump();
 		if (gamepad.btnr.A) this.jumping = false;

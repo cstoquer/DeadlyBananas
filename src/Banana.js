@@ -1,11 +1,12 @@
 var level = require('./Level');
+var AABB  = require('./AABBcollision');
 
 var TILE_WIDTH  = settings.spriteSize[0];
 var TILE_HEIGHT = settings.spriteSize[1];
 
 var FRICTION         = 0.9;
 var ACCELERATION     = 0.01;
-var MAX_ACCELERATION = 0.5;
+var MAX_ACCELERATION = 0.8;
 var THROW_DURATION   = 20;
 var MAX_SPEED        = 3;
 
@@ -18,7 +19,7 @@ function Banana(owner) {
 	this.sx = 0;
 	this.sy = 0;
 
-	this.owner  = owner;
+	this.owner = owner;
 
 	// flags
 	this.flying   = false;
@@ -26,13 +27,24 @@ function Banana(owner) {
 
 	//counters
 	this.throwCounter = 0;
+
+	// rendering
+	this.frame = 0;
 }
 
 module.exports = Banana;
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Banana.prototype.draw = function () {
-	sprite(16, this.x - 3, this.y - 3, this.flipH);
+	var s;
+	if (this.flying) {
+		this.frame += 0.2;
+		if (this.frame >= 4) this.frame = 0;
+		s = this.owner.sprite + 9 + ~~this.frame;
+	} else {
+		s = this.owner.sprite + 8;
+	}
+	sprite(s, this.x - 3, this.y - 3);
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
@@ -60,10 +72,12 @@ Banana.prototype.update = function () {
 
 		this.maxSpeed();
 		this.levelCollisions();
+
+		if (AABB(this, this.owner)) this.flying = false;
 		
 	} else {
 		this.x = this.owner.x + 3;
-		this.y = this.owner.y + 3;
+		this.y = this.owner.y - 3;
 	}
 };
 
