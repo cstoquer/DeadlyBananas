@@ -5867,7 +5867,7 @@ Sound.prototype.stop = function (cb) {
 	return cb && cb(); // TODO: fade-out
 };
 
-},{"./ISound.js":30,"util":46}],33:[function(require,module,exports){
+},{"./ISound.js":30,"util":47}],33:[function(require,module,exports){
 var inherits = require('util').inherits;
 var ISound   = require('./ISound.js');
 
@@ -6249,7 +6249,7 @@ SoundBuffered.prototype.stop = function (cb) {
 };
 
 
-},{"./ISound.js":30,"util":46}],34:[function(require,module,exports){
+},{"./ISound.js":30,"util":47}],34:[function(require,module,exports){
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 /** Set of sound played in sequence each times it triggers
  *  used for animation sfx
@@ -6602,7 +6602,7 @@ function showProgress(load, current, count, percent) {
 cls().paper(1).pen(1).rect(CENTER - HALF_WIDTH - 2, MIDDLE - 4, HALF_WIDTH * 2 + 4, 8); // loading bar
 assetLoader.preloadStaticAssets(onAssetsLoaded, showProgress);
 
-},{"../settings.json":36,"../src/main.js":41,"EventEmitter":1,"Map":2,"TINA":23,"Texture":26,"assetLoader":27,"audio-manager":29}],36:[function(require,module,exports){
+},{"../settings.json":36,"../src/main.js":42,"EventEmitter":1,"Map":2,"TINA":23,"Texture":26,"assetLoader":27,"audio-manager":29}],36:[function(require,module,exports){
 module.exports={
 	"screen": {
 		"width": 160,
@@ -6639,14 +6639,26 @@ module.exports={
 	}
 }
 },{}],37:[function(require,module,exports){
+
+function AABBcollision(a, b) {
+	return a.x < b.x + b.w  
+		&& a.y < b.y + b.h
+		&& b.x < a.x + a.w 
+		&& b.y < a.y + a.h;
+}
+
+module.exports = AABBcollision;
+
+},{}],38:[function(require,module,exports){
 var level = require('./Level');
+var AABB  = require('./AABBcollision');
 
 var TILE_WIDTH  = settings.spriteSize[0];
 var TILE_HEIGHT = settings.spriteSize[1];
 
 var FRICTION         = 0.9;
 var ACCELERATION     = 0.01;
-var MAX_ACCELERATION = 0.5;
+var MAX_ACCELERATION = 0.8;
 var THROW_DURATION   = 20;
 var MAX_SPEED        = 3;
 
@@ -6676,12 +6688,15 @@ module.exports = Banana;
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Banana.prototype.draw = function () {
+	var s;
 	if (this.flying) {
 		this.frame += 0.2;
 		if (this.frame >= 4) this.frame = 0;
-		sprite(this.owner.sprite + 9 + ~~this.frame, this.x - 3, this.y - 3);
+		s = this.owner.sprite + 9 + ~~this.frame;
+	} else {
+		s = this.owner.sprite + 8;
 	}
-	else sprite(this.owner.sprite + 8, this.x - 3, this.y - 3);
+	sprite(s, this.x - 3, this.y - 3);
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
@@ -6709,6 +6724,8 @@ Banana.prototype.update = function () {
 
 		this.maxSpeed();
 		this.levelCollisions();
+
+		if (AABB(this, this.owner)) this.flying = false;
 		
 	} else {
 		this.x = this.owner.x + 3;
@@ -6750,7 +6767,7 @@ Banana.prototype.fire = function (sx, sy) {
 	this.sy = sy;
 	this.maxSpeed();
 };
-},{"./Level":38}],38:[function(require,module,exports){
+},{"./AABBcollision":37,"./Level":39}],39:[function(require,module,exports){
 var Map     = require('Map');
 var Texture = require('Texture');
 var tiles   = require('./tiles');
@@ -6834,7 +6851,7 @@ Level.prototype.getSpawnPoints = function () {
 
 module.exports = new Level();
 
-},{"./tiles":42,"Map":2,"Texture":26}],39:[function(require,module,exports){
+},{"./tiles":43,"Map":2,"Texture":26}],40:[function(require,module,exports){
 var level       = require('./Level');
 var Banana      = require('./Banana');
 
@@ -7030,7 +7047,7 @@ Monkey.prototype._ground = function () {
 	this.sy = 0;
 };
 
-},{"./Banana":37,"./Level":38}],40:[function(require,module,exports){
+},{"./Banana":38,"./Level":39}],41:[function(require,module,exports){
 var MAPPING_BUTTONS = [
 	'A', 'B', 'X', 'Y',           // buttons
 	'lb', 'rb', 'lt','rt',        // bumpers and triggers
@@ -7139,7 +7156,7 @@ function getGamepadsFallback() {
 
 module.exports = GAMEPAD_AVAILABLE ? getGamepads : getGamepadsFallback;
 
-},{}],41:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 var level       = require('./Level');
 var Monkey      = require('./Monkey');
 var getGamepads = require('./gamepad.js');
@@ -7183,7 +7200,7 @@ exports.update = function () {
 	}
 };
 
-},{"./Level":38,"./Monkey":39,"./gamepad.js":40}],42:[function(require,module,exports){
+},{"./Level":39,"./Monkey":40,"./gamepad.js":41}],43:[function(require,module,exports){
 var EMPTY   = exports.EMPTY   = { isEmpty: true,  isSolid: false, isTopSolid: false };
 var SOLID   = exports.SOLID   = { isEmpty: false, isSolid: true,  isTopSolid: true  };
 var ONE_WAY = exports.ONE_WAY = { isEmpty: false, isSolid: false, isTopSolid: true  };
@@ -7199,7 +7216,7 @@ exports.getTileFromMapItem = function (mapItem) {
 };
 
 
-},{}],43:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -7224,7 +7241,7 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],44:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -7317,14 +7334,14 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],45:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],46:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -7914,4 +7931,4 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":45,"_process":44,"inherits":43}]},{},[35]);
+},{"./support/isBuffer":46,"_process":45,"inherits":44}]},{},[35]);
