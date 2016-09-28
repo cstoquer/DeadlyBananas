@@ -6933,6 +6933,7 @@ Monkey.prototype.action = function (gamepad) {
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Monkey.prototype.teleport = function () {
+	if (!this.banana.flying) return;
 	// TODO: cooldown
 	var x = this.x;
 	var y = this.y;
