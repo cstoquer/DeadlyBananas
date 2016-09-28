@@ -6860,6 +6860,8 @@ var TILE_HEIGHT = settings.spriteSize[1];
 
 var GRAVITY     = 0.5;
 var MAX_GRAVITY = 3;
+var SPEED_WALK  = 1;
+var SPEED_RUN   = 2;
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 function Monkey(gamepadIndex) {
@@ -6924,8 +6926,8 @@ Monkey.prototype.update = function (gamepads, dt) {
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Monkey.prototype.action = function (gamepad) {
-	// TODO test if hold banana
-
+	// test if hold banana
+	if (this.banana.flying) return; // TODO allow a number of extra push
 	this.banana.fire(this.sx + gamepad.x * 4, this.sy + gamepad.y * 4);
 };
 
@@ -6966,8 +6968,8 @@ Monkey.prototype._updateControls = function (gamepads) {
 		if (gamepad.btnr.A) this.jumping = false;
 		if (gamepad.btn.A)  this.jump();
 
-		if (gamepad.btn.right || gamepad.x >  0.5) { this.sx =  1; this.flipH = false; } // going right
-		if (gamepad.btn.left  || gamepad.x < -0.5) { this.sx = -1; this.flipH = true;  } // going left
+		if (gamepad.btn.right || gamepad.x >  0.5) { this.sx = gamepad.btn.rt ?  SPEED_RUN :  SPEED_WALK; this.flipH = false; } // going right
+		if (gamepad.btn.left  || gamepad.x < -0.5) { this.sx = gamepad.btn.rt ? -SPEED_RUN : -SPEED_WALK; this.flipH = true;  } // going left
 
 		if (gamepad.btnp.X) this.action(gamepad);
 		if (gamepad.btnp.B) this.teleport(); // TODO
@@ -7170,7 +7172,8 @@ canvas.style.width  = '100%';
 canvas.style.height = '100%';
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-level.load(assets.levels.level2);
+var levelNum = random(2) + 1;
+level.load(assets.levels['level' + levelNum]);
 
 // TODO: make this array dynamic to add and remove monkeys
 var monkeys = [
