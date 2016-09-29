@@ -11,7 +11,8 @@ canvas.style.width  = '100%';
 canvas.style.height = '100%';
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-level.load(assets.levels.level2);
+var levelNum = random(2) + 1;
+level.load(assets.levels['level' + levelNum]);
 
 // TODO: make this array dynamic to add and remove monkeys
 var monkeys = [
