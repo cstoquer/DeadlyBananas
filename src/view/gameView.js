@@ -23,9 +23,9 @@ var CAMERA_SHAKE_FRICTION     = 0.85;
 // monkey
 var monkeys = exports.monkeys = [
 	new Monkey(0, 0, 0),
-	new Monkey(1, 0, 0),
-	new Monkey(2, 0, 0),
-	new Monkey(3, 0, 0)
+	new Monkey(1, 1, 1),
+	new Monkey(2, 2, 2),
+	new Monkey(3, 3, 3)
 ];
 
 // camera
