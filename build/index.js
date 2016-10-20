@@ -4262,7 +4262,7 @@ Texture.prototype.setCamera = function (x, y) {
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 var PI2 = Math.PI / 2;
 
-Texture.prototype.sprite = function (sprite, x, y, flipH, flipV, rot) {
+Texture.prototype.sprite = function (sprite, x, y, flipH, flipV, flipR) {
 	var sx = sprite % SPRITES_PER_LINE;
 	var sy = ~~(sprite / SPRITES_PER_LINE);
 	var ctx = this.ctx;
@@ -4273,7 +4273,7 @@ Texture.prototype.sprite = function (sprite, x, y, flipH, flipV, rot) {
 	x = ~~Math.round(x - this.camera.x);
 	y = ~~Math.round(y - this.camera.y);
 
-	if (!flipH && !flipV && !rot) {
+	if (!flipH && !flipV && !flipR) {
 		ctx.drawImage(this.spritesheet.canvas, sx * SPRITE_WIDTH, sy * SPRITE_HEIGHT, SPRITE_WIDTH, SPRITE_HEIGHT, x, y, SPRITE_WIDTH, SPRITE_HEIGHT);
 		return this;
 	}
@@ -4291,7 +4291,7 @@ Texture.prototype.sprite = function (sprite, x, y, flipH, flipV, rot) {
 		y -= SPRITE_HEIGHT;
 	}
 
-	if (rot) {
+	if (flipR) {
 		ctx.translate(x + SPRITE_HEIGHT, y);
 		ctx.rotate(PI2);
 	} else {
@@ -4304,30 +4304,29 @@ Texture.prototype.sprite = function (sprite, x, y, flipH, flipV, rot) {
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-Texture.prototype.draw = function (img, x, y, flipH, flipV) {
+Texture.prototype.draw = function (img, x, y, flipH, flipV, flipR) {
 	if (img._isMap) img = img.texture.canvas;
 	if (img._isTexture) img = img.canvas;
 	var px = ~~Math.round((x || 0) - this.camera.x);
 	var py = ~~Math.round((y || 0) - this.camera.y);
-	if (!flipH && !flipV) {
+	if (!flipH && !flipV && !flipR) {
 		// fast version
 		this.ctx.drawImage(img, px, py);
 		return this;
 	}
 	var ctx = this.ctx;
 	ctx.save();
-	if (flipH) {
-		ctx.scale(-1, 1);
-		px *= -1;
-		px -= img.width;
+	if (flipH) { ctx.scale(-1, 1); px *= -1; px -= img.width;  }
+	if (flipV) { ctx.scale(1, -1); py *= -1; py -= img.height; }
+
+	if (flipR) {
+		ctx.translate(px + img.height, py);
+		ctx.rotate(PI2);
+	} else {
+		ctx.translate(px, py);
 	}
-	if (flipV) {
-		ctx.scale(1, -1);
-		py *= -1
-		py -= img.height;
-	}
-	ctx.translate(px, py);
-	this.ctx.drawImage(img, 0, 0);
+
+	ctx.drawImage(img, 0, 0);
 	ctx.restore();
 	return this;
 };
@@ -5867,7 +5866,7 @@ Sound.prototype.stop = function (cb) {
 	return cb && cb(); // TODO: fade-out
 };
 
-},{"./ISound.js":30,"util":47}],33:[function(require,module,exports){
+},{"./ISound.js":30,"util":49}],33:[function(require,module,exports){
 var inherits = require('util').inherits;
 var ISound   = require('./ISound.js');
 
@@ -6249,7 +6248,7 @@ SoundBuffered.prototype.stop = function (cb) {
 };
 
 
-},{"./ISound.js":30,"util":47}],34:[function(require,module,exports){
+},{"./ISound.js":30,"util":49}],34:[function(require,module,exports){
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 /** Set of sound played in sequence each times it triggers
  *  used for animation sfx
@@ -6343,7 +6342,6 @@ var Map          = require('Map');
 // built-in modules
 
 window.EventEmitter = EventEmitter;
-// window.Map          = Map;
 window.TINA         = TINA;
 
 window.inherits = function (Child, Parent) {
@@ -6438,7 +6436,6 @@ var gamepads = window.gamepads = {};
 })();
 
 function gamepadHandler(event, connecting) {
-	console.log('Gamepad event', connecting)
 	var gamepad = event.gamepad;
 	if (connecting) {
 		gamepads[gamepad.index] = gamepad;
@@ -6455,8 +6452,6 @@ window.addEventListener("gamepaddisconnected", function (e) { gamepadHandler(e, 
 
 var currentSpritesheet = Texture.prototype.currentSpritesheet;
 var textCharset = Texture.prototype.textCharset;
-
-window.Texture = Texture;
 
 window.texture = function (img) {
 	var texture = new Texture(img.width, img.height);
@@ -6486,7 +6481,7 @@ screen.setPalette(settings.palette);
 
 window.cls      = function ()                 { return screen.cls();                    };
 window.sprite   = function (s, x, y, h, v, r) { return screen.sprite(s, x, y, h, v, r); };
-window.draw     = function (img, x, y, h, v)  { return screen.draw(img, x, y, h, v);    };
+window.draw     = function (i, x, y, h, v, r) { return screen.draw(i, x, y, h, v, r);   };
 window.rect     = function (x, y, w, h)       { return screen.rect(x, y, w, h);         };
 window.rectfill = function (x, y, w, h)       { return screen.rectfill(x, y, w, h);     };
 window.camera   = function (x, y)             { return screen.setCamera(x, y);          };
@@ -6516,28 +6511,7 @@ window.random = function (n) {
 	return ~~Math.round(n * Math.random());
 };
 
-//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-// simple clock divider utility class
-function Clock(m) {
-	this.m = m || 1;
-	this.i = 0;
-}
-window.Clock = Clock;
 
-Clock.prototype.tick = function(n) {
-	this.i += n || 1;
-	if (this.i > this.m) {
-		this.i = 0;
-		return true;
-	}
-	return false;
-};
-Clock.prototype.tic = Clock.prototype._tick; // deprecated
-
-/*Object.defineProperty(Clock.prototype, 'tick', {
-	get: function () { return this._tick(); },
-	set: function () {}
-});*/
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 // main
@@ -6602,7 +6576,7 @@ function showProgress(load, current, count, percent) {
 cls().paper(1).pen(1).rect(CENTER - HALF_WIDTH - 2, MIDDLE - 4, HALF_WIDTH * 2 + 4, 8); // loading bar
 assetLoader.preloadStaticAssets(onAssetsLoaded, showProgress);
 
-},{"../settings.json":36,"../src/main.js":42,"EventEmitter":1,"Map":2,"TINA":23,"Texture":26,"assetLoader":27,"audio-manager":29}],36:[function(require,module,exports){
+},{"../settings.json":36,"../src/main.js":43,"EventEmitter":1,"Map":2,"TINA":23,"Texture":26,"assetLoader":27,"audio-manager":29}],36:[function(require,module,exports){
 module.exports={
 	"screen": {
 		"width": 160,
@@ -6650,193 +6624,119 @@ function AABBcollision(a, b) {
 module.exports = AABBcollision;
 
 },{}],38:[function(require,module,exports){
-var level = require('./Level');
-var AABB  = require('./AABBcollision');
+var Map      = require('Map');
+var Texture  = require('Texture');
+var tiles    = require('./tiles');
+// var entities = require('./entity/entities')
 
 var TILE_WIDTH  = settings.spriteSize[0];
 var TILE_HEIGHT = settings.spriteSize[1];
 
-var FRICTION         = 0.9;
-var ACCELERATION     = 0.01;
-var MAX_ACCELERATION = 0.8;
-var THROW_DURATION   = 20;
-var MAX_SPEED        = 3;
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-function Banana(owner) {
-	this.x  = 0;
-	this.y  = 0;
-	this.w  = 2;
-	this.h  = 2;
-	this.sx = 0;
-	this.sy = 0;
+var t = exports;
 
-	this.owner = owner;
+t.width  = 20;
+t.height = 18;
 
-	// flags
-	this.flying   = false;
-	this.throwing = false;
-
-	//counters
-	this.throwCounter = 0;
-
-	// rendering
-	this.frame = 0;
-}
-
-module.exports = Banana;
+t.background = null;
+t.layer      = new Texture(t.width * TILE_WIDTH, t.height * TILE_HEIGHT);
+t.geometry   = new Map(t.width, t.height);
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-Banana.prototype.draw = function () {
-	var s;
-	if (this.flying) {
-		this.frame += 0.2;
-		if (this.frame >= 4) this.frame = 0;
-		s = this.owner.sprite + 9 + ~~this.frame;
-	} else {
-		s = this.owner.sprite + 8;
-	}
-	sprite(s, this.x - 3, this.y - 3);
-};
-
-//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-Banana.prototype.maxSpeed = function () {
-	if (this.sx >  MAX_SPEED) this.sx =  MAX_SPEED;
-	if (this.sx < -MAX_SPEED) this.sx = -MAX_SPEED;
-	if (this.sy >  MAX_SPEED) this.sy =  MAX_SPEED;
-	if (this.sy < -MAX_SPEED) this.sy = -MAX_SPEED;
-}
-
-
-//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-Banana.prototype.update = function () {
-	if (this.throwing) {
-		if (this.throwCounter++ > THROW_DURATION) {
-			this.throwing = false;
-		}
-		this.levelCollisions();
-	} else if (this.flying) {
-		this.sx += clip((this.owner.x - this.x) * ACCELERATION, -MAX_ACCELERATION, MAX_ACCELERATION);
-		this.sy += clip((this.owner.y - this.y) * ACCELERATION, -MAX_ACCELERATION, MAX_ACCELERATION);
-
-		this.sx *= FRICTION;
-		this.sy *= FRICTION;
-
-		this.maxSpeed();
-		this.levelCollisions();
-
-		if (AABB(this, this.owner)) this.flying = false;
-		
-	} else {
-		this.x = this.owner.x + 3;
-		this.y = this.owner.y - 3;
-	}
-};
-
-//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-Banana.prototype.levelCollisions = function () {
-
-	var x = this.x + this.sx;
-	var y = this.y + this.sy;
-
-
-	if (level.getTileAt(x, this.y).isSolid) {
-		this.sx *= -1;
-		x = this.x; // TODO
-		// x = ~~(x / TILE_WIDTH) * TILE_WIDTH + frontOffset;
-	}
-
-	if (level.getTileAt(this.x, y).isSolid) {
-		this.sy *= -1;
-		y = this.y; // TODO
-	}
-
-
-	// fetch position
-	this.x = x;
-	this.y = y;
-};
-
-
-//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-Banana.prototype.fire = function (sx, sy) {
-	this.flying = true;
-	this.throwing = true;
-	this.throwCounter = 0;
-	this.sx = sx;
-	this.sy = sy;
-	this.maxSpeed();
-};
-},{"./AABBcollision":37,"./Level":39}],39:[function(require,module,exports){
-var Map     = require('Map');
-var Texture = require('Texture');
-var tiles   = require('./tiles');
-
-var TILE_WIDTH  = settings.spriteSize[0];
-var TILE_HEIGHT = settings.spriteSize[1];
-
-var STAGE_WIDTH  = 20;
-var STAGE_HEIGHT = 20;
-
-
-//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-function Level() {
-	this.width  = STAGE_WIDTH;
-	this.height = STAGE_HEIGHT;
-	this.background = new Texture(STAGE_WIDTH * TILE_WIDTH, STAGE_HEIGHT * TILE_HEIGHT);
-	this.geometry   = new Map(STAGE_WIDTH, STAGE_HEIGHT);
-}
-
-//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-Level.prototype.load = function (levelDef) {
-	var id = levelDef.id;
-	var path = 'level' + id + '/';
+exports.load = function (levelId) {
+	// var id = levelDef.id;
+	var path = levelId + '/';
 
 	// geometry
-	this.geometry = getMap(path + 'G');
-	if (!this.geometry) console.error('Could not find map', path + 'G');
+	t.geometry = getMap(path + 'G');
+	if (!t.geometry) console.error('Could not find map', path + 'G');
 
 	// resize
-	var w = this.geometry.width  * TILE_WIDTH;
-	var h = this.geometry.height * TILE_HEIGHT;
-	// TODO HUD
+	t.width  = t.geometry.width;
+	t.height = t.geometry.height;
+	var w = t.width  * TILE_WIDTH;
+	var h = t.height * TILE_HEIGHT;
+
+	// resize main canvas
 	var canvas = $screen.canvas;
-	this.width  = canvas.width  = w;
-	this.height = canvas.height = h;
+	canvas.width  = w;
+	canvas.height = h;
+
+	// background
+	t.background = getMap(path + 'B');
 
 	// design
-	this.background.resize(w, h);
-	this.background.paper(levelDef.paper);
-	this.background.cls();
+	t.layer.resize(w, h);
+	t.layer.clear();
 
 	var l = 0;
 	var layer = getMap(path + 'L' + l);
 	while (layer) {
-		this.background.draw(layer);
+		t.layer.draw(layer);
 		layer = getMap(path + 'L' + (++l));
 	}
 
-	return this;
+	// add entities
+	/*for (var x = 0; x < t.width;  x++) {
+	for (var y = 0; y < t.height; y++) {
+		// TODO
+		var item = t.geometry.get(x, y);
+		if (!item) continue;
+		entities.createEntityfromMapItem(item);
+	}}*/
+
+	return t;
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-Level.prototype.draw = function () {
-	draw(this.background, 0, 0);
+exports.drawBackground = function () {
+	if (t.background) draw(t.background, 0, 0);
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-Level.prototype.getTileAt = function (x, y) {
+exports.draw = function () {
+	draw(t.layer, 0, 0);
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+exports.getTileAt = function (x, y) {
 	x = ~~(x / TILE_WIDTH);
 	y = ~~(y / TILE_HEIGHT);
 	// clamp position in level bondaries
-	if (x < 0) x = 0; else if (x >= this.width)  x = this.width  - 1;
-	if (y < 0) y = 0; else if (y >= this.height) y = this.height - 1;
-	// if (x < 0 || y < 0 || x >= this.width || y >= this.height) return EMPTY;
-	return tiles.getTileFromMapItem(this.geometry.get(x, y));
+	if (x < 0) x = 0; else if (x >= t.width)  x = t.width  - 1;
+	if (y < 0) y = 0; else if (y >= t.height) y = t.height - 1;
+	// if (x < 0 || y < 0 || x >= t.width || y >= t.height) return EMPTY;
+	return tiles.getTileFromMapItem(t.geometry.get(x, y));
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-Level.prototype.getSpawnPoints = function () {
+exports.getTile = function (i, j) {
+	// clamp position in level bondaries
+	if (i < 0) i = 0; else if (i >= t.width)  i = t.width  - 1;
+	if (j < 0) j = 0; else if (j >= t.height) j = t.height - 1;
+	return tiles.getTileFromMapItem(t.geometry.get(i, j));
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+/*exports.getEntryPoints = function () {
+	var entries   = t.geometry.find(255);
+	var exits     = t.geometry.find(16);
+	var normalKey = t.geometry.find(32);
+	var glassKey  = t.geometry.find(33);
+	
+	var needKey = !!(normalKey.length || glassKey.length);
+	
+	if (entries.length !== 1 || exits.length !== 1) {
+		console.log('Level entry points miss configured');
+	}
+
+	return { entry: entries[0], exit: exits[0], needKey: needKey };
+};*/
+
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+exports.getSpawnPoints = function () {
 	var spawnPoints = this.geometry.find(255);
 	// randomize order
 	for (var len = spawnPoints.length - 1, i = len; i >= 0; i--) {
@@ -6849,11 +6749,14 @@ Level.prototype.getSpawnPoints = function () {
 	return spawnPoints;
 };
 
-module.exports = new Level();
 
-},{"./tiles":43,"Map":2,"Texture":26}],40:[function(require,module,exports){
-var level       = require('./Level');
-var Banana      = require('./Banana');
+},{"./tiles":44,"Map":2,"Texture":26}],39:[function(require,module,exports){
+// var viewManager = require('./viewManager');
+var gameView    = require('./view/gameView');
+var level       = require('./level');
+var Weapon      = require('./Weapon');
+var AABB        = require('./AABBcollision');
+var tiles       = require('./tiles');
 
 var TILE_WIDTH  = settings.spriteSize[0];
 var TILE_HEIGHT = settings.spriteSize[1];
@@ -6862,91 +6765,165 @@ var GRAVITY     = 0.5;
 var MAX_GRAVITY = 3;
 var SPEED_WALK  = 1;
 var SPEED_RUN   = 2;
+var THROW_SPEED = 4;
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-function Monkey(gamepadIndex) {
+function Monkey(gamepadIndex, monkeyIndex, weaponIndex) {
 	this.x  = 0;
 	this.y  = 0;
 	this.w  = TILE_WIDTH;
 	this.h  = TILE_HEIGHT;
-	this.sx = 0;
-	this.sy = 0;
 
 	this.gamepadIndex = gamepadIndex || 0;
-	this.banana = new Banana(this);
+	this.asset  = assets.monkey[monkeyIndex];
 
-	// flags
-	this.jumping  = false;
-	this.grounded = false;
-	this.isLocked = false;
-
-	// counters
-	this.jumpCounter = 0; // TODO: 
+	this.weapon = new Weapon(this, weaponIndex);
+	
+	this.maxLife = 4;
+	this.lifePoints = this.maxLife;
 
 	// rendering
 	this.sprite = gamepadIndex * 16;
-	this.frame = 0;
-	this.flipH = false;
+
+	this.reset();
 }
 
 module.exports = Monkey;
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Monkey.prototype.reset = function () {
+	this.sx = 0;
+	this.sy = 0;
+	this.dx = 0;
+	this.dy = 0;
+
+	// state
+	this.onTile = tiles.EMPTY;
+
+	// flags
+	this.aiming   = false;
+	this.jumping  = false;
+	this.grounded = false;
+	this.isLocked = false;
+	this.isHit    = false;
+
+	// counters
+	this.jumpCounter = 0;
+	this.hitCounter  = 0;
+
+	// rendering
+	this.frame = 0;
+	this.flipH = false;
+	
+	this.weapon.reset();
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Monkey.prototype.draw = function () {
-	var s = 0;
+	if (this.aiming) {
+		draw(this.asset.arrowDot, this.x + this.dx * 6,  this.y + this.dy * 6  - 7);
+		draw(this.asset.arrowDot, this.x + this.dx * 11, this.y + this.dy * 11 - 7);
+		draw(this.asset.arrow,    this.x + this.dx * 16, this.y + this.dy * 16 - 7);
+	}
+
+	// idle
+	var img = this.asset.idle;
+
+	// hit
+	if (this.isHit && this.isLocked) img = this.asset.hit;
+
 	//jumping
-	if (this.jumping) s = 1;
+	else if (this.jumping) img = this.asset.jump;
 
 	//running
 	else if (this.sx > 0.5 || this.sx < -0.5) {
 		this.frame += 0.3;
 		if (this.frame >= 3) this.frame = 0;
-		s = 2 + ~~this.frame;
+		img = this.asset['run' + ~~this.frame];
 	}
-	sprite(this.sprite + s, this.x, this.y, this.flipH);
-	this.banana.draw();
+
+	draw(img, this.x - 1, this.y - 1, this.flipH);
+	this.weapon.draw();
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-Monkey.prototype.update = function (gamepads, dt) {
+Monkey.prototype.update = function (gamepads) {
 	this._updateControls(gamepads);
 
-	// TODO: movement, gravity, friction
-
-	this.sx *= 0.8; // friction TODO dt
+	// movement, gravity, friction
+	this.sx *= this.isHit ? 0.99 : 0.8;
 
 	if (!this.grounded) {
 		this.sy += GRAVITY;
 		this.sy = Math.min(this.sy, MAX_GRAVITY);
 	}
+
+	// hit
+	if (this.isHit) {
+		this.hitCounter++;
+		if (this.hitCounter > 16) {
+			if (this.lifePoints <= 0) this.death();
+			this.isLocked = false;
+		}
+		// keep Monkey invulnerable for few more frames
+		if (this.hitCounter > 50) this.isHit = false;
+	}
+
 	this.levelCollisions();
 
-	this.banana.update();
+	this.weapon.update();
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-Monkey.prototype.action = function (gamepad) {
-	// test if hold banana
-	if (this.banana.flying) return; // TODO allow a number of extra push
-	this.banana.fire(this.sx + gamepad.x * 4, this.sy + gamepad.y * 4);
+Monkey.prototype.aim = function (gamepad) {
+	if (this.weapon.flying) return;
+
+	this.aiming = true;
+
+	// throw direction
+	// this.dx = 0;
+	// this.dy = 0;
+	if (gamepad.x >  0.2) this.flipH = false;
+	if (gamepad.x < -0.2) this.flipH = true;
+	// if (gamepad.y >  0.5)  this.dy += 1;
+	// if (gamepad.y < -0.5)  this.dy -= 1;
+
+	// // orient monkey in aiming direction
+	// if (this.dx === 0 && this.dy === 0) this.dx = this.flipH ? -1 : 1;
+
+	if (Math.abs(gamepad.x) < 0.2 && Math.abs(gamepad.y) < 0.2) {
+		// no aim, just throw forward
+		this.dx = this.flipH ? -1 : 1;
+		this.dy = 0;
+	} else {
+		var a = Math.atan2(gamepad.y, gamepad.x);
+		this.dx = Math.cos(a);
+		this.dy = Math.sin(a);
+	}
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Monkey.prototype.teleport = function () {
-	if (!this.banana.flying) return;
+	if (!this.weapon.flying) return;
+	var position = this.weapon.getTeleportPosition();
+	if (!position) return;
 	// TODO: cooldown
-	var x = this.x;
-	var y = this.y;
-	this.x = this.banana.x;
-	this.y = this.banana.y;
-	this.banana.x = x;
-	this.banana.y = y;
-	// TODO move monkey away from solid tile
+
+	// sfx('teleport');
+
+	this.weapon.x = this.x + 4;
+	this.weapon.y = this.y + 4;
+	this.x = position.x;
+	this.y = position.y;
+
+	this.grounded = false;
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Monkey.prototype.startJump = function () {
 	if (!this.grounded) return;
+
+	// sfx('jump');
 
 	// if there is a ceiling directly on top of Monkey's head, cancel jump.
 	// if (level.getTileAt(this.x + 1, this.y - 2).isSolid || level.getTileAt(this.x + 6, this.y - 2).isSolid) return;
@@ -6955,6 +6932,7 @@ Monkey.prototype.startJump = function () {
 	this.jumpCounter = 0;
 };
 
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Monkey.prototype.jump = function () {
 	if (!this.jumping) return;
 	if (this.jumpCounter++ > 12) this.jumping = false;
@@ -6962,23 +6940,52 @@ Monkey.prototype.jump = function () {
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-Monkey.prototype._updateControls = function (gamepads) {
-	var gamepad = gamepads[this.gamepadIndex];
-	if (!this.isLocked) {
-		if (gamepad.btnp.A) this.startJump();
-		if (gamepad.btnr.A) this.jumping = false;
-		if (gamepad.btn.A)  this.jump();
+Monkey.prototype.fire = function (gamepad) {
+	this.aiming = false;
+	// this.weapon.fire(this.dx * THROW_SPEED, this.dy * THROW_SPEED);
 
-		if (gamepad.btn.right || gamepad.x >  0.5) { this.sx = gamepad.btn.rt ?  SPEED_RUN :  SPEED_WALK; this.flipH = false; } // going right
-		if (gamepad.btn.left  || gamepad.x < -0.5) { this.sx = gamepad.btn.rt ? -SPEED_RUN : -SPEED_WALK; this.flipH = true;  } // going left
+	var dx, dy;
 
-		if (gamepad.btnp.X) this.action(gamepad);
-		if (gamepad.btnp.B) this.teleport(); // TODO
-			
-
+	if (Math.abs(gamepad.x) < 0.2 && Math.abs(gamepad.y) < 0.2) {
+		// no aim, just throw forward
+		dx = this.flipH ? -THROW_SPEED : THROW_SPEED;
+		dy = 0;
 	} else {
-		if (gamepad.btn.A) this.jump(); // FIXME: this is to allow jump continuation during attack
+		var a = Math.atan2(gamepad.y, gamepad.x);
+		dx = Math.cos(a) * THROW_SPEED;
+		dy = Math.sin(a) * THROW_SPEED;
 	}
+
+	this.weapon.fire(dx, dy);
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Monkey.prototype._updateControls = function (gamepads) {
+	if (this.isLocked) return;
+
+	var gamepad = gamepads[this.gamepadIndex];
+
+	// throw weapon
+	if (gamepad.btnr.X && !this.weapon.flying) this.fire(gamepad);
+
+	// teleport
+	if (gamepad.btnp.X && this.weapon.flying) this.teleport();
+
+	// jump
+	if (gamepad.btnp.A) this.startJump();
+	if (gamepad.btnr.A) this.jumping = false;
+	if (gamepad.btn.A)  this.jump();
+
+	// aiming
+	if (gamepad.btn.X) return this.aim(gamepad);
+
+	// move
+	if (gamepad.x >  0.5) { this.sx = gamepad.btn.rt ?  SPEED_RUN :  SPEED_WALK; this.flipH = false; }
+	if (gamepad.x < -0.5) { this.sx = gamepad.btn.rt ? -SPEED_RUN : -SPEED_WALK; this.flipH = true;  }
+
+	// check tile
+	var tile = this.onTile = level.getTileAt(this.x + 4, this.y + 4);
+	if (tile.kill) return this.death();
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
@@ -6990,7 +6997,16 @@ Monkey.prototype.levelCollisions = function () {
 	var x = this.x + this.sx; // TODO dt
 	var y = this.y + this.sy; // TODO dt
 
-	// TODO: check level boundaries
+	// check level boundaries
+	var maxX = level.width  * TILE_WIDTH - this.w; // TODO don't need to be calculated each frames
+	var maxY = level.height * TILE_HEIGHT + 64; // give monkey 8 more tiles for chnce to teleport
+	if (x < 0)    x = 0;
+	if (x > maxX) x = maxX;
+	if (y > maxY) {
+		// sfx('fall');
+		this.death();
+		return;
+	}
 
 	var front       = this.w;
 	var frontOffset = 0;
@@ -7050,7 +7066,267 @@ Monkey.prototype._ground = function () {
 	this.sy = 0;
 };
 
-},{"./Banana":38,"./Level":39}],41:[function(require,module,exports){
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Monkey.prototype.checkCollisionWithEntity = function (entity) {
+	var weapon = this.weapon;
+	if (                 entity.collisionMonkey && AABB(this,   entity)) entity.collisionMonkey(this);
+	if (weapon.flying && entity.collisionWeapon && AABB(weapon, entity)) entity.collisionWeapon(weapon);
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Monkey.prototype.hit = function (entity) {
+	if (this.isHit) return;
+
+	// sfx('hit');
+
+	this.sx = entity.x < this.x ? 1.6 : -1.6;
+	this.sy = entity.y < this.y ? 2 : -3;
+
+	// TODO
+	this.aiming     = false;
+	this.grounded   = false;
+	this.isLocked   = true;
+	this.isHit      = true;
+	this.hitCounter = 0;
+
+	this.lifePoints -= 1;
+	gameView.shakeCamera(3);
+	// gameView.updateHealthHUD(this.gamepadIndex);
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Monkey.prototype.death = function () {
+	// audioManager.stopLoopSound('weapon');
+	// TODO animation
+	this.lifePoints = this.maxLife;
+	this.isHit      = true;
+	this.isLocked   = true;
+	// viewManager.open('gameover');
+
+	// TODO
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Monkey.prototype.collisionWeapon = function (weapon) {
+	// sfx('explosion');
+	this.hit(weapon);
+	// TODO
+};
+
+},{"./AABBcollision":37,"./Weapon":40,"./level":42,"./tiles":44,"./view/gameView":45}],40:[function(require,module,exports){
+var level    = require('./level');
+var gameView = require('./view/gameView');
+var AABB     = require('./AABBcollision');
+
+var ANIMATION = [
+	{ flipH: false, flipV: false, flipR: false },
+	{ flipH: false, flipV: false, flipR: true  },
+	{ flipH: true,  flipV: true,  flipR: false },
+	{ flipH: true,  flipV: true,  flipR: true  }
+];
+
+var TILE_WIDTH  = settings.spriteSize[0];
+var TILE_HEIGHT = settings.spriteSize[1];
+
+var FRICTION         = 0.9;
+var ACCELERATION     = 0.01;
+var MAX_ACCELERATION = 0.8;
+var THROW_DURATION   = 20;
+var MAX_SPEED        = 3;
+
+var AUDIO_LOOP_START =  0.433;
+var AUDIO_LOOP_END   =  1.369;
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+function Weapon(owner, weaponIndex) {
+	this.x  = 0;
+	this.y  = 0;
+	this.w  = 2;
+	this.h  = 2;
+
+	this.owner = owner;
+	this.weaponIndex = weaponIndex;
+	this.asset = assets.monkey[this.weaponIndex]; // TODO: separate monkey and weapon
+
+	this.reset();
+}
+
+module.exports = Weapon;
+
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Weapon.prototype.reset = function () {
+	// audioManager.stopLoopSound('banana');
+
+	this.sx = 0;
+	this.sy = 0;
+
+	this.grabbing = null;
+
+	// flags
+	this.flying   = false;
+	this.throwing = false;
+
+	//counters
+	this.throwCounter = 0;
+
+	// rendering
+	this.frame = 0;
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Weapon.prototype.draw = function () {
+	if (this.flying) {
+		this.frame += 0.2;
+		if (this.frame >= 4) this.frame = 0;
+		var anim = ANIMATION[~~this.frame];
+		draw(this.asset.weaponFly, this.x - 4, this.y - 4, anim.flipH, anim.flipV, anim.flipR);
+	} else {
+		draw(this.asset.weaponIdle, this.x - 4, this.y - 4);
+	}
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Weapon.prototype.maxSpeed = function () {
+	if (this.sx >  MAX_SPEED) this.sx =  MAX_SPEED;
+	if (this.sx < -MAX_SPEED) this.sx = -MAX_SPEED;
+	if (this.sy >  MAX_SPEED) this.sy =  MAX_SPEED;
+	if (this.sy < -MAX_SPEED) this.sy = -MAX_SPEED;
+};
+
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+/** computing movement */
+Weapon.prototype.update = function () {
+	if (this.throwing) {
+		if (this.throwCounter++ > THROW_DURATION) {
+			this.throwing = false;
+		}
+		this.levelCollisions();
+	} else if (this.flying) {
+		this.sx += clip((this.owner.x - this.x) * ACCELERATION, -MAX_ACCELERATION, MAX_ACCELERATION);
+		this.sy += clip((this.owner.y - this.y) * ACCELERATION, -MAX_ACCELERATION, MAX_ACCELERATION);
+
+		this.sx *= FRICTION;
+		this.sy *= FRICTION;
+
+		this.maxSpeed();
+		this.levelCollisions();
+
+		// the monkey catch the banana
+		if (AABB(this, this.owner)) this._catchWeapon();
+		
+	} else {
+		this.x = this.owner.x + 3;
+		this.y = this.owner.y - 5;
+	}
+
+	// if banana is grabbing something, also update this
+	if (this.grabbing) {
+		this.grabbing.x = this.x - 2;
+		this.grabbing.y = this.y - 6;
+	}
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+/** actually move the entity and check for collisions with level */
+Weapon.prototype.levelCollisions = function () {
+
+	var x = this.x + this.sx;
+	var y = this.y + this.sy;
+
+	// check level boundaries
+	var maxX = level.width * TILE_WIDTH; // TODO don't need to be calculated each frames
+	if (this.sx < 0 && x < 0   ) { x = 0;    this.sx *= -1; }
+	if (this.sx > 0 && x > maxX) { x = maxX; this.sx *= -1; }
+
+
+	if (level.getTileAt(x, this.y).fruitSolid) {
+		this.sx *= -1;
+		x = this.x; // TODO
+		// x = ~~(x / TILE_WIDTH) * TILE_WIDTH + frontOffset;
+	}
+
+	if (level.getTileAt(this.x, y).fruitSolid) {
+		this.sy *= -1;
+		y = this.y; // TODO
+	}
+
+
+	// fetch position
+	this.x = x;
+	this.y = y;
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Weapon.prototype.getTeleportPosition = function () {
+	// inside GLASS
+	if (level.getTileAt(this.x, this.y).isSolid) return null;
+
+	// find a empty space for monkey to teleport
+	var x = this.x - 3;
+	var y = this.y - 3;
+	var monkey = this.owner;
+	var w = monkey.w;
+	var h = monkey.h;
+
+	if (
+		level.getTileAt(x    , y    ).isTeleportable &&
+		level.getTileAt(x + w, y    ).isTeleportable &&
+		level.getTileAt(x    , y + h).isTeleportable &&
+		level.getTileAt(x + w, y + h).isTeleportable
+	) return { x: x, y: y };
+
+	// try on tile values
+	var X = ~~(x / TILE_WIDTH)  * TILE_WIDTH;
+	var Y = ~~(y / TILE_HEIGHT) * TILE_HEIGHT;
+
+	if (level.getTileAt(X,              Y              ).isTeleportable) return { x: X,              y: Y               };
+	if (level.getTileAt(X + TILE_WIDTH, Y              ).isTeleportable) return { x: X + TILE_WIDTH, y: Y               };
+	if (level.getTileAt(X,              Y + TILE_HEIGHT).isTeleportable) return { x: X,              y: Y + TILE_HEIGHT };
+	if (level.getTileAt(X + TILE_WIDTH, Y + TILE_HEIGHT).isTeleportable) return { x: X + TILE_WIDTH, y: Y + TILE_HEIGHT };
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+/** called when the monkey want to throw the banana */
+Weapon.prototype.fire = function (sx, sy) {
+	if (level.getTileAt(this.x, this.y).fruitSolid) {
+		return;
+		// TODO: play "error" sound
+	}
+
+	// audioManager.playLoopSound('banana', 'banana fly', 1, 0, 0, AUDIO_LOOP_START, AUDIO_LOOP_END);
+
+	this.flying   = true;
+	this.throwing = true;
+	this.throwCounter = 0;
+	this.sx = sx;
+	this.sy = sy;
+	this.maxSpeed();
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+/** while flying, the banana collide with an item that can be grabbed */
+// Weapon.prototype.grab = function (item) {
+// 	if (this.grabbing) return;
+// 	// sfx('catch');
+// 	this.grabbing = item;
+// 	gameView.removeEntityFromCollisions(item);
+// };
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+/** the monkey catch the banana */
+Weapon.prototype._catchWeapon = function () {
+	// sfx('catch');
+	this.flying = false;
+	// audioManager.stopLoopSound('banana');
+	if (this.grabbing) {
+		this.grabbing.collectItem(this.owner);
+		this.grabbing = null;
+	}
+};
+
+},{"./AABBcollision":37,"./level":42,"./view/gameView":45}],41:[function(require,module,exports){
 var MAPPING_BUTTONS = [
 	'A', 'B', 'X', 'Y',           // buttons
 	'lb', 'rb', 'lt','rt',        // bumpers and triggers
@@ -7115,8 +7391,10 @@ var GAMEPADS = [
 	new Gamepad()
 ];
 
+var ANY_GAMEPADS = new Gamepad();
+
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-function getGamepads() {
+function getAllGamepads() {
 	var gamepads = navigator.getGamepads();
 
 	for (var gamepadIndex = 0; gamepadIndex < 4; gamepadIndex++) {
@@ -7157,9 +7435,43 @@ function getGamepadsFallback() {
 	return GAMEPADS;
 }
 
-module.exports = GAMEPAD_AVAILABLE ? getGamepads : getGamepadsFallback;
+exports.getAllGamepads = GAMEPAD_AVAILABLE ? getAllGamepads : getGamepadsFallback;
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+exports.getAnyGamepad = function () {
+	exports.getAllGamepads();
+	
+	// buttons
+	for (var i = 0; i < MAPPING_BUTTONS.length; i++) {
+		var key = MAPPING_BUTTONS[i];
+		ANY_GAMEPADS.btnp[key] = btnp[key] || GAMEPADS[0].btnp[key] || GAMEPADS[1].btnp[key] || GAMEPADS[2].btnp[key] || GAMEPADS[3].btnp[key];
+		ANY_GAMEPADS.btnr[key] = btnr[key] || GAMEPADS[0].btnr[key] || GAMEPADS[1].btnr[key] || GAMEPADS[2].btnr[key] || GAMEPADS[3].btnr[key];
+		ANY_GAMEPADS.btn[key]  = btn[key]  || GAMEPADS[0].btn[key]  || GAMEPADS[1].btn[key]  || GAMEPADS[2].btn[key]  || GAMEPADS[3].btn[key];
+	}
+
+	// TODO: axes and triggers
+
+	return ANY_GAMEPADS;
+}
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+var inputMode = 0;
+
+exports.setInpuMode = function (num) {
+	inputMode = num;
+};
+
+exports.getGamepad = function () {
+	// TODO optimize this (only  get the relevant gamepad)
+	if (inputMode === -1) return window;
+	return getAllGamepads()[inputMode];
+};
+
 
 },{}],42:[function(require,module,exports){
+arguments[4][38][0].apply(exports,arguments)
+},{"./tiles":44,"Map":2,"Texture":26,"dup":38}],43:[function(require,module,exports){
+var gameView    = require('./view/gameView');
 var level       = require('./Level');
 var Monkey      = require('./Monkey');
 var getGamepads = require('./gamepad.js');
@@ -7172,46 +7484,31 @@ var canvas = $screen.canvas;
 canvas.style.width  = '100%';
 canvas.style.height = '100%';
 
-//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-var levelNum = random(2) + 1;
-level.load(assets.levels['level' + levelNum]);
 
-// TODO: make this array dynamic to add and remove monkeys
-var monkeys = [
-	new Monkey(0),
-	new Monkey(1),
-	new Monkey(2),
-	new Monkey(3)
-];
-
-var spawnPoints = level.getSpawnPoints();
-for (var i = 0; i < monkeys.length; i++) {
-	monkeys[i].x = spawnPoints[i].x * TILE_WIDTH;
-	monkeys[i].y = spawnPoints[i].y * TILE_HEIGHT;
-}
-
-console.log(monkeys)
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 // Update is called once per frame
-exports.update = function () {
-	cls();
-	level.draw();
-	var gamepads = getGamepads();
-	for (var i = 0; i < monkeys.length; i++) {
-		monkeys[i].update(gamepads);
-		monkeys[i].draw();
-	}
-};
+gameView.open();
+exports.update = gameView.update;
 
-},{"./Level":39,"./Monkey":40,"./gamepad.js":41}],43:[function(require,module,exports){
-var EMPTY   = exports.EMPTY   = { isEmpty: true,  isSolid: false, isTopSolid: false };
-var SOLID   = exports.SOLID   = { isEmpty: false, isSolid: true,  isTopSolid: true  };
-var ONE_WAY = exports.ONE_WAY = { isEmpty: false, isSolid: false, isTopSolid: true  };
+},{"./Level":38,"./Monkey":39,"./gamepad.js":41,"./view/gameView":45}],44:[function(require,module,exports){
+var EMPTY   = exports.EMPTY   = { isEmpty: true,  isSolid: false, isTopSolid: false, fruitSolid: false, isTeleportable: true,  kill: false, interactive: false };
+var SOLID   = exports.SOLID   = { isEmpty: false, isSolid: true,  isTopSolid: true,  fruitSolid: true,  isTeleportable: false, kill: false, interactive: false };
+var ONE_WAY = exports.ONE_WAY = { isEmpty: false, isSolid: false, isTopSolid: true,  fruitSolid: false, isTeleportable: true,  kill: false, interactive: false };
+var KILL    = exports.KILL    = { isEmpty: true,  isSolid: false, isTopSolid: false, fruitSolid: false, isTeleportable: false, kill: true,  interactive: false };
+var GLASS   = exports.GLASS   = { isEmpty: false, isSolid: true,  isTopSolid: true,  fruitSolid: false, isTeleportable: false, kill: false, interactive: false };
+
+var DOOR1   = exports.DOOR1   = { isEmpty: false, isSolid: false, isTopSolid: false, fruitSolid: false, isTeleportable: true,  kill: false, interactive: true, door: 1 };
+var DOOR2   = exports.DOOR2   = { isEmpty: false, isSolid: false, isTopSolid: false, fruitSolid: false, isTeleportable: true,  kill: false, interactive: true, door: 2 };
+var DOOR3   = exports.DOOR3   = { isEmpty: false, isSolid: false, isTopSolid: false, fruitSolid: false, isTeleportable: true,  kill: false, interactive: true, door: 3 };
 
 var tileBySprite = {
 	'0': SOLID,
-	'1': ONE_WAY
+	'1': ONE_WAY,
+	'6': KILL,
+	'7': GLASS,
+	'67': SOLID, // Chained ball in Solid tile
+	'68': GLASS, // Chained ball in Glass tile
 };
 
 exports.getTileFromMapItem = function (mapItem) {
@@ -7220,7 +7517,275 @@ exports.getTileFromMapItem = function (mapItem) {
 };
 
 
-},{}],44:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
+var Texture       = require('Texture');
+// var viewManager   = require('../viewManager');
+// var getAnyGamepad = require('../gamepad').getAnyGamepad;
+var getAllGamepads = require('../gamepad').getAllGamepads;
+var Monkey         = require('../Monkey');
+var level          = require('../level');
+// var TextBox       = require('../TextBox');
+
+
+var SCREEN_W = settings.screen.width;
+var SCREEN_H = settings.screen.height;
+var TILE_W   = settings.spriteSize[0];
+var TILE_H   = settings.spriteSize[0];
+var CENTER_X = ~~(SCREEN_W / 2) - 4;
+var CENTER_Y = ~~(SCREEN_H / 2) - 4;
+
+var CAMERA_ACCELERATION       = 0.1;
+var CAMERA_SHAKE_ACCELERATION = 0.35;
+var CAMERA_SHAKE_FRICTION     = 0.85;
+
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+// monkey
+var monkeys = exports.monkeys = [
+	new Monkey(0, 0, 0),
+	new Monkey(1, 1, 1),
+	new Monkey(2, 2, 2),
+	new Monkey(3, 3, 3)
+];
+
+// camera
+var backgroundColor = 0;
+var parallax       = 1;
+var camX           = 0;
+var camY           = 0;
+var camShakeX      = 0;
+var camShakeY      = 0;
+var camShakeSpeedX = 0;
+var camShakeSpeedY = 0;
+
+
+// level
+var CURRENT_LEVEL = 0;
+var MAX_LEVEL_W   = 0;
+var MAX_LEVEL_H   = 0;
+var needKey = false;
+
+// entities
+var entitiesDraw    = [];
+var entitiesCollide = [];
+
+// HUD
+// var isDisplayingMessage = false;
+// var displayMessageCounter = 0;
+// var messageBanner = new TextBox(160, 8, assets.font.tetris).setColor(3);
+// messageBanner.paper = 3;
+
+// var healthHUD = new Texture(160, 8);
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+function resetCamera() {
+	camShakeX      = 0;
+	camShakeY      = 0;
+	camShakeSpeedX = 0;
+	camShakeSpeedY = 0;
+}
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+exports.shakeCamera = function (force) {
+	camShakeSpeedX = force;
+	camShakeSpeedY = force * 2 * (Math.random() - 0.5);
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+function drawDoor(entryPoint, direction, type) {
+	level.layer.draw(
+		assets.entity.doors[direction + type],
+		entryPoint[direction].x * TILE_W - 8,
+		entryPoint[direction].y * TILE_H - 8
+	);
+}
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+function loadLevel() {
+	resetCamera();
+
+	// reset level
+	entitiesDraw    = [];
+	entitiesCollide = [];
+
+	// get data
+	var levelNum = random(2);
+	var levelData = assets.levels[levelNum];
+
+	// music
+	// var musicId = levelData.music;
+	// if (musicId === null) {
+	// 	// stop music
+	// 	audioManager.stopLoopSound('sfx');
+	// } else if (musicId) {
+	// 	var loopData = assets.music[musicId];
+	// 	audioManager.playLoopSound('sfx', musicId, 1, 0, 0, loopData.start, loopData.end);
+	// }
+
+	// load level
+	level.load(levelData.id);
+	backgroundColor = levelData.paper;
+	parallax        = levelData.parallax;
+	var spawnPoints = level.getSpawnPoints();
+
+	// add doors
+	// var doorType = levelData.doorType || 1;
+	// drawDoor(entryPoint, 'entry', doorType);
+	// drawDoor(entryPoint, 'exit',  doorType);
+	// needKey = entryPoint.needKey;
+
+	// level boundaries
+	MAX_LEVEL_W = level.width  * TILE_W - SCREEN_W;
+	MAX_LEVEL_H = level.height * TILE_H - SCREEN_H;
+
+	// set monkeys positions
+	for (var i = 0; i < monkeys.length; i++) {
+		monkeys[i].x = spawnPoints[i].x * TILE_W;
+		monkeys[i].y = spawnPoints[i].y * TILE_H;
+	}
+
+	// init camera on monkey
+	// camX = clip(monkey.x - CENTER_X, 0, MAX_LEVEL_W);
+	// camY = clip(monkey.y - CENTER_Y, 0, MAX_LEVEL_H);
+
+	// exports.updateHealthHUD();
+}
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+exports.open = function(params) {
+	params = params || {};
+	loadLevel();
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+// exports.respawn = function () {
+// 	// TODO animation
+// 	monkey.reset();
+// 	loadLevel();
+// };
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+// exports.gotoNextLevel = function () {
+// 	if (needKey && !monkey.hasKey) {
+// 		exports.displayMessage(' THE DOOR IS LOCKED');
+// 		// play sound
+// 		sfx('wrong');
+// 		return;
+// 	}
+// 	// TODO animation
+// 	monkey.reset();
+// 	CURRENT_LEVEL += 1;
+// 	loadLevel();
+// };
+	
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+// Update is called once per frame
+exports.update = function () {
+	paper(backgroundColor).cls();
+
+	// controls
+	var gamepads = getAllGamepads();
+
+	// update camera position
+	// var scrollX = clip(monkey.x - CENTER_X, 0, MAX_LEVEL_W);
+	// var scrollY = clip(monkey.y - CENTER_Y, 0, MAX_LEVEL_H);
+
+	// var diffX = scrollX - camX;
+	// if (diffX > -1 && diffX < 1) camX = scrollX;
+	// else camX += diffX * CAMERA_ACCELERATION;
+	// camY += (scrollY - camY) * CAMERA_ACCELERATION;
+
+	// camera shaking
+	
+	camShakeSpeedX -= camShakeX * CAMERA_SHAKE_ACCELERATION;
+	camShakeSpeedY -= camShakeY * CAMERA_SHAKE_ACCELERATION;
+	camShakeSpeedX *= CAMERA_SHAKE_FRICTION;
+	camShakeSpeedY *= CAMERA_SHAKE_FRICTION;
+	camShakeX += camShakeSpeedX;
+	camShakeY += camShakeSpeedY;
+
+
+	// var cx = camX + camShakeX;
+	// var cy = camY + camShakeY;
+	// background with parallax effect
+	// camera(cx * parallax, cy * parallax);
+	level.drawBackground();
+
+	// main level
+	camera(camShakeX, camShakeY);
+	level.draw();
+
+	for (var m = 0; m < monkeys.length; m++) {
+		monkeys[m].update(gamepads);
+		monkeys[m].draw();
+		// monkeys collisions
+		for (var i = 0; i < monkeys.length; i++) {
+			if (i === m) continue;
+			monkeys[m].checkCollisionWithEntity(monkeys[i]);
+		}
+	}
+
+	// entities draw
+	for (var i = 0; i < entitiesDraw.length; i++) {
+		entitiesDraw[i].draw();
+	}
+
+	// entities collisions
+	// for (var i = 0; i < entitiesCollide.length; i++) {
+	// 	monkey.checkCollisionWithEntity(entitiesCollide[i]);
+	// }
+
+	// HUD
+	// camera(0, 0);
+	// if (isDisplayingMessage) {
+	// 	draw(messageBanner.texture, 0, 136);
+	// 	if (--displayMessageCounter <= 0) isDisplayingMessage = false;
+	// } else {
+	// 	draw(healthHUD, 0, 136);
+	// }
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+exports.addEntity = function (entity, doCollide) {
+	entitiesDraw.push(entity);
+	if (doCollide) entitiesCollide.push(entity);
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+exports.removeEntityFromCollisions = function (entity) {
+	// remove from collide
+	index = entitiesCollide.indexOf(entity);
+	if (index !== -1) entitiesCollide.splice(index, 1);
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+exports.removeEntity = function (entity) {
+	// remove from draw
+	var index = entitiesDraw.indexOf(entity);
+	if (index !== -1) entitiesDraw.splice(index, 1);
+
+	// remove from collisions
+	exports.removeEntityFromCollisions(entity);
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+// exports.displayMessage = function (message) {
+// 	isDisplayingMessage   = true;
+// 	displayMessageCounter = 80;
+// 	messageBanner.cls();
+// 	messageBanner.addText(message, 0, 0);
+// };
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+// exports.updateHealthHUD = function () {
+// 	healthHUD.clear();
+// 	for (var i = 0; i < monkey.maxLife; i++) {
+// 		s = i < monkey.lifePoints ? assets.hud.healthFull : assets.hud.healthEmpty;
+// 		healthHUD.draw(s, 1 + i * 5, 0);
+// 	}
+// };
+
+},{"../Monkey":39,"../gamepad":41,"../level":42,"Texture":26}],46:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -7245,7 +7810,7 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],45:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -7338,14 +7903,14 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],46:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],47:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -7935,4 +8500,4 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":46,"_process":45,"inherits":44}]},{},[35]);
+},{"./support/isBuffer":48,"_process":47,"inherits":46}]},{},[35]);

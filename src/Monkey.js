@@ -1,5 +1,9 @@
-var level       = require('./Level');
-var Banana      = require('./Banana');
+// var viewManager = require('./viewManager');
+var gameView    = require('./view/gameView');
+var level       = require('./level');
+var Weapon      = require('./Weapon');
+var AABB        = require('./AABBcollision');
+var tiles       = require('./tiles');
 
 var TILE_WIDTH  = settings.spriteSize[0];
 var TILE_HEIGHT = settings.spriteSize[1];
@@ -8,91 +12,165 @@ var GRAVITY     = 0.5;
 var MAX_GRAVITY = 3;
 var SPEED_WALK  = 1;
 var SPEED_RUN   = 2;
+var THROW_SPEED = 4;
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-function Monkey(gamepadIndex) {
+function Monkey(gamepadIndex, monkeyIndex, weaponIndex) {
 	this.x  = 0;
 	this.y  = 0;
 	this.w  = TILE_WIDTH;
 	this.h  = TILE_HEIGHT;
-	this.sx = 0;
-	this.sy = 0;
 
 	this.gamepadIndex = gamepadIndex || 0;
-	this.banana = new Banana(this);
+	this.asset  = assets.monkey[monkeyIndex];
 
-	// flags
-	this.jumping  = false;
-	this.grounded = false;
-	this.isLocked = false;
-
-	// counters
-	this.jumpCounter = 0; // TODO: 
+	this.weapon = new Weapon(this, weaponIndex);
+	
+	this.maxLife = 4;
+	this.lifePoints = this.maxLife;
 
 	// rendering
 	this.sprite = gamepadIndex * 16;
-	this.frame = 0;
-	this.flipH = false;
+
+	this.reset();
 }
 
 module.exports = Monkey;
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Monkey.prototype.reset = function () {
+	this.sx = 0;
+	this.sy = 0;
+	this.dx = 0;
+	this.dy = 0;
+
+	// state
+	this.onTile = tiles.EMPTY;
+
+	// flags
+	this.aiming   = false;
+	this.jumping  = false;
+	this.grounded = false;
+	this.isLocked = false;
+	this.isHit    = false;
+
+	// counters
+	this.jumpCounter = 0;
+	this.hitCounter  = 0;
+
+	// rendering
+	this.frame = 0;
+	this.flipH = false;
+	
+	this.weapon.reset();
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Monkey.prototype.draw = function () {
-	var s = 0;
+	if (this.aiming) {
+		draw(this.asset.arrowDot, this.x + this.dx * 6,  this.y + this.dy * 6  - 7);
+		draw(this.asset.arrowDot, this.x + this.dx * 11, this.y + this.dy * 11 - 7);
+		draw(this.asset.arrow,    this.x + this.dx * 16, this.y + this.dy * 16 - 7);
+	}
+
+	// idle
+	var img = this.asset.idle;
+
+	// hit
+	if (this.isHit && this.isLocked) img = this.asset.hit;
+
 	//jumping
-	if (this.jumping) s = 1;
+	else if (this.jumping) img = this.asset.jump;
 
 	//running
 	else if (this.sx > 0.5 || this.sx < -0.5) {
 		this.frame += 0.3;
 		if (this.frame >= 3) this.frame = 0;
-		s = 2 + ~~this.frame;
+		img = this.asset['run' + ~~this.frame];
 	}
-	sprite(this.sprite + s, this.x, this.y, this.flipH);
-	this.banana.draw();
+
+	draw(img, this.x - 1, this.y - 1, this.flipH);
+	this.weapon.draw();
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-Monkey.prototype.update = function (gamepads, dt) {
+Monkey.prototype.update = function (gamepads) {
 	this._updateControls(gamepads);
 
-	// TODO: movement, gravity, friction
-
-	this.sx *= 0.8; // friction TODO dt
+	// movement, gravity, friction
+	this.sx *= this.isHit ? 0.99 : 0.8;
 
 	if (!this.grounded) {
 		this.sy += GRAVITY;
 		this.sy = Math.min(this.sy, MAX_GRAVITY);
 	}
+
+	// hit
+	if (this.isHit) {
+		this.hitCounter++;
+		if (this.hitCounter > 16) {
+			if (this.lifePoints <= 0) this.death();
+			this.isLocked = false;
+		}
+		// keep Monkey invulnerable for few more frames
+		if (this.hitCounter > 50) this.isHit = false;
+	}
+
 	this.levelCollisions();
 
-	this.banana.update();
+	this.weapon.update();
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-Monkey.prototype.action = function (gamepad) {
-	// test if hold banana
-	if (this.banana.flying) return; // TODO allow a number of extra push
-	this.banana.fire(this.sx + gamepad.x * 4, this.sy + gamepad.y * 4);
+Monkey.prototype.aim = function (gamepad) {
+	if (this.weapon.flying) return;
+
+	this.aiming = true;
+
+	// throw direction
+	// this.dx = 0;
+	// this.dy = 0;
+	if (gamepad.x >  0.2) this.flipH = false;
+	if (gamepad.x < -0.2) this.flipH = true;
+	// if (gamepad.y >  0.5)  this.dy += 1;
+	// if (gamepad.y < -0.5)  this.dy -= 1;
+
+	// // orient monkey in aiming direction
+	// if (this.dx === 0 && this.dy === 0) this.dx = this.flipH ? -1 : 1;
+
+	if (Math.abs(gamepad.x) < 0.2 && Math.abs(gamepad.y) < 0.2) {
+		// no aim, just throw forward
+		this.dx = this.flipH ? -1 : 1;
+		this.dy = 0;
+	} else {
+		var a = Math.atan2(gamepad.y, gamepad.x);
+		this.dx = Math.cos(a);
+		this.dy = Math.sin(a);
+	}
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Monkey.prototype.teleport = function () {
-	if (!this.banana.flying) return;
+	if (!this.weapon.flying) return;
+	var position = this.weapon.getTeleportPosition();
+	if (!position) return;
 	// TODO: cooldown
-	var x = this.x;
-	var y = this.y;
-	this.x = this.banana.x;
-	this.y = this.banana.y;
-	this.banana.x = x;
-	this.banana.y = y;
-	// TODO move monkey away from solid tile
+
+	// sfx('teleport');
+
+	this.weapon.x = this.x + 4;
+	this.weapon.y = this.y + 4;
+	this.x = position.x;
+	this.y = position.y;
+
+	this.grounded = false;
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Monkey.prototype.startJump = function () {
 	if (!this.grounded) return;
+
+	// sfx('jump');
 
 	// if there is a ceiling directly on top of Monkey's head, cancel jump.
 	// if (level.getTileAt(this.x + 1, this.y - 2).isSolid || level.getTileAt(this.x + 6, this.y - 2).isSolid) return;
@@ -101,6 +179,7 @@ Monkey.prototype.startJump = function () {
 	this.jumpCounter = 0;
 };
 
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
 Monkey.prototype.jump = function () {
 	if (!this.jumping) return;
 	if (this.jumpCounter++ > 12) this.jumping = false;
@@ -108,23 +187,52 @@ Monkey.prototype.jump = function () {
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-Monkey.prototype._updateControls = function (gamepads) {
-	var gamepad = gamepads[this.gamepadIndex];
-	if (!this.isLocked) {
-		if (gamepad.btnp.A) this.startJump();
-		if (gamepad.btnr.A) this.jumping = false;
-		if (gamepad.btn.A)  this.jump();
+Monkey.prototype.fire = function (gamepad) {
+	this.aiming = false;
+	// this.weapon.fire(this.dx * THROW_SPEED, this.dy * THROW_SPEED);
 
-		if (gamepad.btn.right || gamepad.x >  0.5) { this.sx = gamepad.btn.rt ?  SPEED_RUN :  SPEED_WALK; this.flipH = false; } // going right
-		if (gamepad.btn.left  || gamepad.x < -0.5) { this.sx = gamepad.btn.rt ? -SPEED_RUN : -SPEED_WALK; this.flipH = true;  } // going left
+	var dx, dy;
 
-		if (gamepad.btnp.X) this.action(gamepad);
-		if (gamepad.btnp.B) this.teleport(); // TODO
-			
-
+	if (Math.abs(gamepad.x) < 0.2 && Math.abs(gamepad.y) < 0.2) {
+		// no aim, just throw forward
+		dx = this.flipH ? -THROW_SPEED : THROW_SPEED;
+		dy = 0;
 	} else {
-		if (gamepad.btn.A) this.jump(); // FIXME: this is to allow jump continuation during attack
+		var a = Math.atan2(gamepad.y, gamepad.x);
+		dx = Math.cos(a) * THROW_SPEED;
+		dy = Math.sin(a) * THROW_SPEED;
 	}
+
+	this.weapon.fire(dx, dy);
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Monkey.prototype._updateControls = function (gamepads) {
+	if (this.isLocked) return;
+
+	var gamepad = gamepads[this.gamepadIndex];
+
+	// throw weapon
+	if (gamepad.btnr.X && !this.weapon.flying) this.fire(gamepad);
+
+	// teleport
+	if (gamepad.btnp.X && this.weapon.flying) this.teleport();
+
+	// jump
+	if (gamepad.btnp.A) this.startJump();
+	if (gamepad.btnr.A) this.jumping = false;
+	if (gamepad.btn.A)  this.jump();
+
+	// aiming
+	if (gamepad.btn.X) return this.aim(gamepad);
+
+	// move
+	if (gamepad.x >  0.5) { this.sx = gamepad.btn.rt ?  SPEED_RUN :  SPEED_WALK; this.flipH = false; }
+	if (gamepad.x < -0.5) { this.sx = gamepad.btn.rt ? -SPEED_RUN : -SPEED_WALK; this.flipH = true;  }
+
+	// check tile
+	var tile = this.onTile = level.getTileAt(this.x + 4, this.y + 4);
+	if (tile.kill) return this.death();
 };
 
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
@@ -136,7 +244,16 @@ Monkey.prototype.levelCollisions = function () {
 	var x = this.x + this.sx; // TODO dt
 	var y = this.y + this.sy; // TODO dt
 
-	// TODO: check level boundaries
+	// check level boundaries
+	var maxX = level.width  * TILE_WIDTH - this.w; // TODO don't need to be calculated each frames
+	var maxY = level.height * TILE_HEIGHT + 64; // give monkey 8 more tiles for chnce to teleport
+	if (x < 0)    x = 0;
+	if (x > maxX) x = maxX;
+	if (y > maxY) {
+		// sfx('fall');
+		this.death();
+		return;
+	}
 
 	var front       = this.w;
 	var frontOffset = 0;
@@ -194,4 +311,51 @@ Monkey.prototype._ground = function () {
 	this.grounded = true;
 	this.jumping  = false;
 	this.sy = 0;
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Monkey.prototype.checkCollisionWithEntity = function (entity) {
+	var weapon = this.weapon;
+	if (                 entity.collisionMonkey && AABB(this,   entity)) entity.collisionMonkey(this);
+	if (weapon.flying && entity.collisionWeapon && AABB(weapon, entity)) entity.collisionWeapon(weapon);
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Monkey.prototype.hit = function (entity) {
+	if (this.isHit) return;
+
+	// sfx('hit');
+
+	this.sx = entity.x < this.x ? 1.6 : -1.6;
+	this.sy = entity.y < this.y ? 2 : -3;
+
+	// TODO
+	this.aiming     = false;
+	this.grounded   = false;
+	this.isLocked   = true;
+	this.isHit      = true;
+	this.hitCounter = 0;
+
+	this.lifePoints -= 1;
+	gameView.shakeCamera(3);
+	// gameView.updateHealthHUD(this.gamepadIndex);
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Monkey.prototype.death = function () {
+	// audioManager.stopLoopSound('weapon');
+	// TODO animation
+	this.lifePoints = this.maxLife;
+	this.isHit      = true;
+	this.isLocked   = true;
+	// viewManager.open('gameover');
+
+	// TODO
+};
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+Monkey.prototype.collisionWeapon = function (weapon) {
+	// sfx('explosion');
+	this.hit(weapon);
+	// TODO
 };

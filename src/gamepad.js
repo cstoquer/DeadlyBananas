@@ -62,8 +62,10 @@ var GAMEPADS = [
 	new Gamepad()
 ];
 
+var ANY_GAMEPADS = new Gamepad();
+
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-function getGamepads() {
+function getAllGamepads() {
 	var gamepads = navigator.getGamepads();
 
 	for (var gamepadIndex = 0; gamepadIndex < 4; gamepadIndex++) {
@@ -104,4 +106,35 @@ function getGamepadsFallback() {
 	return GAMEPADS;
 }
 
-module.exports = GAMEPAD_AVAILABLE ? getGamepads : getGamepadsFallback;
+exports.getAllGamepads = GAMEPAD_AVAILABLE ? getAllGamepads : getGamepadsFallback;
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+exports.getAnyGamepad = function () {
+	exports.getAllGamepads();
+	
+	// buttons
+	for (var i = 0; i < MAPPING_BUTTONS.length; i++) {
+		var key = MAPPING_BUTTONS[i];
+		ANY_GAMEPADS.btnp[key] = btnp[key] || GAMEPADS[0].btnp[key] || GAMEPADS[1].btnp[key] || GAMEPADS[2].btnp[key] || GAMEPADS[3].btnp[key];
+		ANY_GAMEPADS.btnr[key] = btnr[key] || GAMEPADS[0].btnr[key] || GAMEPADS[1].btnr[key] || GAMEPADS[2].btnr[key] || GAMEPADS[3].btnr[key];
+		ANY_GAMEPADS.btn[key]  = btn[key]  || GAMEPADS[0].btn[key]  || GAMEPADS[1].btn[key]  || GAMEPADS[2].btn[key]  || GAMEPADS[3].btn[key];
+	}
+
+	// TODO: axes and triggers
+
+	return ANY_GAMEPADS;
+}
+
+//▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+var inputMode = 0;
+
+exports.setInpuMode = function (num) {
+	inputMode = num;
+};
+
+exports.getGamepad = function () {
+	// TODO optimize this (only  get the relevant gamepad)
+	if (inputMode === -1) return window;
+	return getAllGamepads()[inputMode];
+};
+
